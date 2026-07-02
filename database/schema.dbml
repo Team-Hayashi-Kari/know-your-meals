@@ -1,0 +1,69 @@
+Table users {
+    id uuid [pk]
+    google_sub varchar [unique, not null]
+    email varchar [unique, not null]
+    display_name varchar
+    avatar_url varchar
+    bio text
+    created_at timestamp [default: `now()`]
+    updated_at timestamp [default: `now()`]
+
+    Note: 'Googleログインのみのため、パスワードは持たない'
+}
+
+Table restaurants {
+    id uuid [pk]
+    google_place_id varchar [unique]
+    name varchar [not null]
+    address varchar
+    latitude float [not null]
+    longitude float [not null]
+    created_at timestamp [default: `now()`]
+
+    Note: '検索で選ばれた、またはユーザーが新規登録したお店の情報'
+}
+
+Table posts {
+    id uuid [pk]
+    user_id uuid [not null]
+    restaurant_id uuid [not null]
+    image_url varchar
+    comment text
+    created_at timestamp [default: `now()`]
+    updated_at timestamp [default: `now()`]
+
+    Note: '編集画面はこのテーブルのUPDATE操作にあたる'
+}
+
+Table bookmarks {
+    id uuid [pk]
+    user_id uuid [not null]
+    post_id uuid [not null]
+    created_at timestamp [default: `now()`]
+
+    indexes {
+        (user_id, post_id) [unique, name: 'uq_bookmarks_user_post']
+    }
+
+    Note: '同じ投稿を二重保存できないようにunique制約をつける'
+}
+
+Table follows {
+    follower_id uuid [not null]
+    followee_id uuid [not null]
+    created_at timestamp [default: `now()`]
+
+    indexes {
+        (follower_id, followee_id) [pk]
+    }
+
+    Note: 'FF機能。follower_id=フォローする側、followee_id=フォローされる側'
+}
+
+// ---- リレーション定義 ----
+Ref: posts.user_id > users.id
+Ref: posts.restaurant_id > restaurants.id
+Ref: bookmarks.user_id > users.id
+Ref: bookmarks.post_id > posts.id
+Ref: follows.follower_id > users.id
+Ref: follows.followee_id > users.id
