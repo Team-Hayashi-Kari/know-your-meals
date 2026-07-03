@@ -1,0 +1,198 @@
+// ============================================================
+// Know Your Meals - Database Schema (確定版)
+// dbdiagram.io などに貼り付けてER図として可視化できます
+// ============================================================
+
+//======================================
+// 認証系 (better-auth 標準テーブル)
+// memendex の実装をベースに、handle / bio を独自追加
+//======================================
+
+Table user {
+  id text [pk, note: 'better-authが生成する文字列ID(uuidではない)']
+  name text [not null, note: 'Google認証由来の表示名。編集はbetter-auth APIを通す']
+  email text [not null, unique]
+  emailVerified boolean [not null, default: false]
+  image text [null, note: 'Googleのプロフィール画像URL']
+  handle text [unique, null, note: '''
+    アプリ独自追加カラム。
+    プロフィールURL・フレンド検索用の一意なハンドル名(@xxx)。
+    NULLの間は初期プロフィール未完了とみなす(isNewUserフラグの代替)。
+    初期プロフィール作成画面で必須入力。
+  ''']
+  bio text [null, note: 'アプリ独自追加カラム。自己紹介。']
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`, note: '$onUpdateで自動更新']
+}
+
+Table session {
+  id text [pk]
+  expiresAt timestamp [not null]
+  token text [not null, unique]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null]
+  ipAddress text [null]
+  userAgent text [null]
+  userId text [ref: > user.id, not null, note: 'onDelete: cascade']
+
+  Note: 'better-auth標準テーブル。手動編集はしない。'
+}
+
+Table account {
+  id text [pk]
+  accountId text [not null]
+  providerId text [not null, note: '"google" が入る想定']
+  userId text [ref: > user.id, not null, note: 'onDelete: cascade']
+  accessToken text [null]
+  refreshToken text [null]
+  idToken text [null]
+  accessTokenExpiresAt timestamp [null]
+  refreshTokenExpiresAt timestamp [null]
+  scope text [null]
+  password text [null, note: 'Google Onlyのため実質未使用']
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null]
+
+  Note: 'better-auth標準テーブル。OAuthプロバイダとの紐付け。手動編集はしない。'
+}
+
+Table verification {
+  id text [pk]
+  identifier text [not null]
+  value text [not null]
+  expiresAt timestamp [not null]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+
+  Note: 'better-auth標準テーブル。Google Onlyの構成では使用頻度は低い。手動編集はしない。'
+}
+
+//======================================
+// アプリ独自ドメインテーブル
+//======================================
+
+Table shops {
+  id serial [pk, note: '内部結合専用。外部にはgooglePlaceIdで一意性を担保しているため連番で問題ない']
+  googlePlaceId text [unique, not null, note: 'Google Places APIのplace_id。重複キャッシュ防止のキー']
+  name text [not null]
+  address text [null]
+  lat "double precision" [not null]
+  lng "double precision" [not null]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`, note: '''
+    将来「一定期間経過したキャッシュをGoogle Places APIから再取得する」
+    運用を行う場合に備えて保持。MVPでは更新処理自体は未実装の想定。
+  ''']
+
+  Note: '''
+    Google Places APIから取得した店舗情報のキャッシュ。
+    投稿確定時、googlePlaceIdで既存レコードを検索し、
+    なければPlace Details APIを叩いてINSERTする(1店舗1回のみAPI課金)。
+  '''
+
+  indexes {
+    (lat, lng) [name: 'shops_lat_lng_idx', note: 'マップ表示範囲内のピン取得用。MVP規模では無くても実害は小さい']
+  }
+}
+
+Table posts {
+  id serial [pk]
+  userId text [ref: > user.id, not null, note: 'onDelete: cascade']
+  shopId integer [ref: > shops.id, not null, note: 'onDelete: restrict(店舗削除機能は現状なし)']
+  imageURL text [not null, note: '''
+    R2の公開URLをフルパスで保存(相対キーではない)。
+    postsのidとは無関係な独立したuuidで採番する(完全プロキシ方式、サーバー側で生成)。
+    画像はクライアント側でexpo-image-manipulatorにより圧縮してからアップロードする。
+    注意: R2の公開ドメインを将来変更する場合、過去投稿のURLは追従しないため
+    一括更新のマイグレーションが必要になる。
+  ''']
+  comment text [null]
+  pin pin_emoji_enum [not null, note: '''
+    マップ上のピンに使う絵文字。料理ジャンルを表す固定セットから選択(自由入力不可)。
+    同じ店に複数投稿がある場合、閲覧者(の友達)の投稿の中で最も多いpinを
+    その店のピンとして表示する。この集計は保存せず、都度クエリで計算する
+    (閲覧者ごとに見える投稿=フレンド関係が異なるため、固定値として持たせられない)。
+  ''']
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+
+  Note: '''
+    公開範囲の概念は持たない(visibilityカラムなし)。
+    本アプリはBeReal同様、フレンド間限定での共有を前提としているため、
+    投稿は常にフレンドにのみ表示される。
+  '''
+
+  indexes {
+    userId [name: 'posts_user_id_idx']
+    shopId [name: 'posts_shop_id_idx']
+  }
+}
+
+Table bookmarks {
+  id serial [pk]
+  userId text [ref: > user.id, not null, note: 'onDelete: cascade']
+  postId integer [ref: > posts.id, not null, note: 'onDelete: cascade']
+  createdAt timestamp [not null, default: `now()`, note: '保存した順の並び替えに使用']
+  updatedAt timestamp [not null, default: `now()`, note: '''
+    運用上はINSERT/DELETEのみでUPDATEは発生しない想定だが、
+    他テーブルとの一貫性のため保持。
+  ''']
+
+  Note: '「保存(ブックマーク)」機能。中身の編集はなく、保存/未保存の状態のみを表す。'
+
+  indexes {
+    (userId, postId) [unique, name: 'bookmarks_user_post_idx', note: '二重保存の防止']
+  }
+}
+
+Table friendships {
+  id serial [pk]
+  requesterId text [ref: > user.id, not null, note: '申請した人。onDelete: cascade']
+  addresseeId text [ref: > user.id, not null, note: '申請された人。onDelete: cascade']
+  status friendship_status_enum [not null, default: 'pending']
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`, note: '承認/拒否(denied)時に更新']
+
+  Note: '''
+    双方向フレンド(申請・承認制)。1レコード = 片方向の申請。
+    「AとBがフレンド」は requesterId=A,addresseeId=B のレコード1件のみで表現される
+    (逆方向のレコードは作らない)。
+
+    ある人物の「友達一覧」を取得する際は、
+    requesterId側・addresseeId側の両方をOR条件で検索し、
+    自分ではない方のIDを相手として抽出する必要がある。
+    (例: CASE WHEN requester_id = :me THEN addressee_id ELSE requester_id END)
+
+    「送った申請一覧」はrequesterId側のみ、
+    「届いた申請一覧」はaddresseeId側のみを見ればよく、こちらは片方向の単純なWHEREで済む。
+  '''
+
+  indexes {
+    (requesterId, addresseeId) [unique, name: 'friendships_requester_addressee_idx', note: '同じ相手への重複申請の防止']
+    addresseeId [name: 'friendships_addressee_id_idx']
+    requesterId [name: 'friendships_requester_id_idx']
+  }
+}
+
+//======================================
+// Enums
+//======================================
+
+Enum pin_emoji_enum {
+  "🍜"
+  "🍣"
+  "🍛"
+  "🍙"
+  "🍔"
+  "🍕"
+  "🥩"
+  "🍰"
+  "🍺"
+  "🥟"
+}
+
+Enum friendship_status_enum {
+  pending
+  accepted
+  denied
+}
