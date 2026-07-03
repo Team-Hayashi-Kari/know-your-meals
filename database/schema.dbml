@@ -1,69 +1,109 @@
-Table users {
-    id uuid [pk]
-    google_sub varchar [unique, not null]
-    email varchar [unique, not null]
-    display_name varchar
-    avatar_url varchar
-    bio text
-    created_at timestamp [default: `now()`]
-    updated_at timestamp [default: `now()`]
+// ============================================================
+//  better-auth が自動生成するテーブル
+//  （better-auth CLIコマンドで生成されるので手書き不要だが、
+//   DBdiagramで関係を可視化するために記述）
+// ============================================================
 
-    Note: 'Googleログインのみのため、パスワードは持たない'
+Table user {
+    id text [pk, note: 'better-authが生成。デフォルトは文字列(text)型']
+    name varchar [not null, note: '表示名。旧設計のdisplay_nameはこれで代用できる']
+    email varchar [unique, not null]
+    email_verified boolean [not null]
+    image varchar [note: 'アバター画像URL。旧設計のavatar_urlはこれで代用できる']
+    username varchar [unique, note: '＠ハンドル名。自分で追加するフィールド(任意)']
+    bio text [note: '自己紹介。自分で追加するフィールド']
+    created_at timestamp [not null]
+    updated_at timestamp [not null]
+
+    Note: 'Googleログイン情報はこのuserではなくaccountテーブルに保存される'
 }
 
+Table account {
+    id text [pk]
+    account_id text [not null]
+    provider_id text [not null, note: 'googleなどのプロバイダ名が入る']
+    user_id text [not null]
+    access_token text
+    refresh_token text
+    created_at timestamp [not null]
+    updated_at timestamp [not null]
+
+    Note: 'OAuth(Google)のトークンを管理。better-authが自動生成'
+}
+
+Table session {
+    id text [pk]
+    user_id text [not null]
+    token text [unique, not null]
+    expires_at timestamp [not null]
+    created_at timestamp [not null]
+    updated_at timestamp [not null]
+
+    Note: 'ログインセッション。better-authが自動生成'
+}
+
+// ============================================================
+//  システム独自のテーブル(自作)
+// ============================================================
+
 Table restaurants {
-    id uuid [pk]
-    google_place_id varchar [unique]
+    id serial [pk, note: 'uuidではなくserialで十分']
+    google_place_id varchar [unique, not null, note: 'Google Maps APIのPlace ID。重複登録を防ぐキー']
     name varchar [not null]
     address varchar
-    latitude float [not null]
+    latitude float [not null, note: 'マップのピン表示に使用']
     longitude float [not null]
-    created_at timestamp [default: `now()`]
-
-    Note: '検索で選ばれた、またはユーザーが新規登録したお店の情報'
+    created_at timestamp [not null, default: `now()`]
+    updated_at timestamp [not null, default: `now()`, note: '他テーブルと揃えて追加']
 }
 
 Table posts {
-    id uuid [pk]
-    user_id uuid [not null]
-    restaurant_id uuid [not null]
-    image_url varchar
+    id serial [pk]
+    user_id text [not null, note: 'user.idがtext型なので、ここもtextで型を合わせる']
+    restaurant_id integer [not null, note: 'restaurants.idがserial(整数)なのでintegerで合わせる']
+    image_url varchar [not null, note: '投稿には必ず画像が要るのでnot null']
     comment text
-    created_at timestamp [default: `now()`]
-    updated_at timestamp [default: `now()`]
-
-    Note: '編集画面はこのテーブルのUPDATE操作にあたる'
+    created_at timestamp [not null, default: `now()`]
+    updated_at timestamp [not null, default: `now()`, note: 'PostgreSQLは自動更新しない。Drizzleの$onUpdateで更新する']
 }
 
 Table bookmarks {
-    id uuid [pk]
-    user_id uuid [not null]
-    post_id uuid [not null]
-    created_at timestamp [default: `now()`]
+    id serial [pk]
+    user_id text [not null]
+    post_id integer [not null]
+    created_at timestamp [not null, default: `now()`]
 
     indexes {
         (user_id, post_id) [unique, name: 'uq_bookmarks_user_post']
     }
 
-    Note: '同じ投稿を二重保存できないようにunique制約をつける'
+    Note: '同じ投稿の二重保存を防ぐため(user_id, post_id)にunique制約'
+}
+
+Enum follow_status {
+    pending  [note: '申請中(承認待ち)']
+    accepted [note: '承認済み(フォロー成立)']
+    rejected [note: '拒否']
 }
 
 Table follows {
-    follower_id uuid [not null]
-    followee_id uuid [not null]
-    created_at timestamp [default: `now()`]
+    follower_id text [not null, note: 'フォローする側']
+    followee_id text [not null, note: 'フォローされる側']
+    status follow_status [not null, default: 'pending', note: '承認制フォローの状態']
+    created_at timestamp [not null, default: `now()`]
+    updated_at timestamp [not null, default: `now()`, note: 'status変更時に更新']
 
     indexes {
         (follower_id, followee_id) [pk]
     }
-
-    Note: 'FF機能。follower_id=フォローする側、followee_id=フォローされる側'
 }
 
 // ---- リレーション定義 ----
-Ref: posts.user_id > users.id
+Ref: account.user_id > user.id
+Ref: session.user_id > user.id
+Ref: posts.user_id > user.id
 Ref: posts.restaurant_id > restaurants.id
-Ref: bookmarks.user_id > users.id
+Ref: bookmarks.user_id > user.id
 Ref: bookmarks.post_id > posts.id
-Ref: follows.follower_id > users.id
-Ref: follows.followee_id > users.id
+Ref: follows.follower_id > user.id
+Ref: follows.followee_id > user.id
