@@ -4,33 +4,32 @@
 //   DBdiagramで関係を可視化するために記述）
 // ============================================================
 
+// ユーザー情報
 Table user {
-    id text [pk, note: 'better-authが生成。デフォルトは文字列(text)型']
-    name varchar [not null, note: '表示名。旧設計のdisplay_nameはこれで代用できる']
+    id text [pk]
+    name varchar [not null]
     email varchar [unique, not null]
     email_verified boolean [not null]
-    image varchar [note: 'アバター画像URL。旧設計のavatar_urlはこれで代用できる']
-    username varchar [unique, note: '＠ハンドル名。自分で追加するフィールド(任意)']
-    bio text [note: '自己紹介。自分で追加するフィールド']
+    image varchar
+    username varchar [unique]
+    bio text
     created_at timestamp [not null]
     updated_at timestamp [not null]
-
-    Note: 'Googleログイン情報はこのuserではなくaccountテーブルに保存される'
 }
 
+// OAuthアカウント情報
 Table account {
     id text [pk]
     account_id text [not null]
-    provider_id text [not null, note: 'googleなどのプロバイダ名が入る']
+    provider_id text [not null]
     user_id text [not null]
     access_token text
     refresh_token text
     created_at timestamp [not null]
     updated_at timestamp [not null]
-
-    Note: 'OAuth(Google)のトークンを管理。better-authが自動生成'
 }
 
+// ログインセッション
 Table session {
     id text [pk]
     user_id text [not null]
@@ -38,35 +37,36 @@ Table session {
     expires_at timestamp [not null]
     created_at timestamp [not null]
     updated_at timestamp [not null]
-
-    Note: 'ログインセッション。better-authが自動生成'
 }
 
 // ============================================================
 //  システム独自のテーブル(自作)
 // ============================================================
 
+// レストラン情報
 Table restaurants {
-    id serial [pk, note: 'uuidではなくserialで十分']
-    google_place_id varchar [unique, not null, note: 'Google Maps APIのPlace ID。重複登録を防ぐキー']
+    id serial [pk]
+    google_place_id varchar [unique, not null]
     name varchar [not null]
     address varchar
-    latitude float [not null, note: 'マップのピン表示に使用']
+    latitude float [not null]
     longitude float [not null]
     created_at timestamp [not null, default: `now()`]
-    updated_at timestamp [not null, default: `now()`, note: '他テーブルと揃えて追加']
+    updated_at timestamp [not null, default: `now()`]
 }
 
+// 投稿情報
 Table posts {
     id serial [pk]
-    user_id text [not null, note: 'user.idがtext型なので、ここもtextで型を合わせる']
-    restaurant_id integer [not null, note: 'restaurants.idがserial(整数)なのでintegerで合わせる']
-    image_url varchar [not null, note: '投稿には必ず画像が要るのでnot null']
+    user_id text [not null]
+    restaurant_id integer [not null]
+    image_url varchar [not null]
     comment text
     created_at timestamp [not null, default: `now()`]
-    updated_at timestamp [not null, default: `now()`, note: 'PostgreSQLは自動更新しない。Drizzleの$onUpdateで更新する']
+    updated_at timestamp [not null, default: `now()`]
 }
 
+// ブックマーク情報
 Table bookmarks {
     id serial [pk]
     user_id text [not null]
@@ -76,22 +76,22 @@ Table bookmarks {
     indexes {
         (user_id, post_id) [unique, name: 'uq_bookmarks_user_post']
     }
-
-    Note: '同じ投稿の二重保存を防ぐため(user_id, post_id)にunique制約'
 }
 
+// フォロー情報
 Enum follow_status {
-    pending  [note: '申請中(承認待ち)']
-    accepted [note: '承認済み(フォロー成立)']
-    rejected [note: '拒否']
+    pending
+    accepted
+    rejected
 }
 
+// フォロー情報
 Table follows {
-    follower_id text [not null, note: 'フォローする側']
-    followee_id text [not null, note: 'フォローされる側']
-    status follow_status [not null, default: 'pending', note: '承認制フォローの状態']
+    follower_id text [not null] // フォローするユーザーのID
+    followee_id text [not null] // フォローされるユーザーのID
+    status follow_status [not null, default: 'pending']
     created_at timestamp [not null, default: `now()`]
-    updated_at timestamp [not null, default: `now()`, note: 'status変更時に更新']
+    updated_at timestamp [not null, default: `now()`]
 
     indexes {
         (follower_id, followee_id) [pk]
