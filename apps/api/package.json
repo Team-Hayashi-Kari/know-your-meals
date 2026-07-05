@@ -15,8 +15,9 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "hono": "^4.12.27",
     "@repo/db": "workspace:*",
-    "@repo/shared": "workspace:*"
+    "@repo/shared": "workspace:*",
+    "better-auth": "^1.6.23",
+    "hono": "^4.12.27"
   }
 }
