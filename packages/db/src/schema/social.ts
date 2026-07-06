@@ -1,22 +1,9 @@
 import { relations } from 'drizzle-orm';
-import {
-  index,
-  integer,
-  pgEnum,
-  pgTable,
-  serial,
-  text,
-  timestamp,
-  uniqueIndex,
-} from 'drizzle-orm/pg-core';
+import { index, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { user } from './auth';
 import { posts, shops } from './content';
 
-export const friendshipStatusEnum = pgEnum('friendship_status', [
-  'pending',
-  'accepted',
-  'denied',
-]);
+export const friendshipStatusEnum = pgEnum('friendship_status', ['pending', 'accepted', 'denied']);
 
 export const bookmarks = pgTable(
   'bookmarks',
@@ -34,9 +21,7 @@ export const bookmarks = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [
-    uniqueIndex('bookmarks_user_post_idx').on(table.userId, table.postId),
-  ],
+  (table) => [uniqueIndex('bookmarks_user_post_idx').on(table.userId, table.postId)],
 );
 
 export const friendships = pgTable(
@@ -57,10 +42,7 @@ export const friendships = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex('friendships_requester_addressee_idx').on(
-      table.requesterId,
-      table.addresseeId,
-    ),
+    uniqueIndex('friendships_requester_addressee_idx').on(table.requesterId, table.addresseeId),
     index('friendships_addressee_id_idx').on(table.addresseeId),
     index('friendships_requester_id_idx').on(table.requesterId),
   ],
