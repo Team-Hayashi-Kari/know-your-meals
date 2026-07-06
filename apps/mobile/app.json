@@ -1,5 +1,6 @@
 {
   "expo": {
+    "plugins": [["expo-router", { "root": "src" }]],
     "name": "mobile",
     "slug": "mobile",
     "scheme": "knowyourmeals",

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Spinner, Text, YStack } from 'tamagui';
-import { authClient } from '../../src/lib/auth-client';
+import { authClient } from '../../lib/auth-client';
 
 export default function HomeScreen() {
   const router = useRouter();

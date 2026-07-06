@@ -3,7 +3,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Platform } from 'react-native';
 import { Button, Spinner, Text, XStack, YStack } from 'tamagui';
-import { authClient } from '../src/lib/auth-client';
+import { authClient } from '../lib/auth-client';
 
 WebBrowser.maybeCompleteAuthSession();
 
