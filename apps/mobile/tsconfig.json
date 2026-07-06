@@ -4,7 +4,6 @@
     "strict": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@tamagui/config": ["./tamagui.config.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"]

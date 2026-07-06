@@ -1,8 +1,9 @@
+import { config } from '@tamagui/config';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { createTamagui, TamaguiProvider } from 'tamagui';
 
-const tamaguiConfig = createTamagui({});
+const tamaguiConfig = createTamagui(config);
 
 export default function RootLayout() {
   return (
