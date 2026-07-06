@@ -1,3 +1,4 @@
+import { expo } from '@better-auth/expo';
 import { createDb } from '@repo/db';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
@@ -19,5 +20,7 @@ export function createAuth(env: {
         clientSecret: env.GOOGLE_CLIENT_SECRET,
       },
     },
+    trustedOrigins: ['exp://', 'knowyourmeals://', 'http://localhost:8081'],
+    plugins: [expo()],
   });
 }

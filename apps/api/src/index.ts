@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { createAuth } from './lib/auth';
 
 type Env = {
@@ -13,6 +14,15 @@ type Env = {
 
 const app = new Hono<Env>()
   .get('/health', (c) => c.json({ status: 'ok' }))
+  .use(
+    '/api/auth/**',
+    cors({
+      origin: ['knowyourmeals://', 'exp://', 'http://localhost:8081'],
+      allowMethods: ['GET', 'POST', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'Authorization', 'expo-origin'],
+      credentials: true,
+    }),
+  )
   .on(['GET', 'POST'], '/api/auth/**', (c) => {
     return createAuth(c.env).handler(c.req.raw);
   });
