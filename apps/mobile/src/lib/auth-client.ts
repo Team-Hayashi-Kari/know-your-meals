@@ -1,5 +1,16 @@
-import { createAuthClient } from 'better-auth/client';
+import { expoClient } from '@better-auth/expo/client';
+import { createAuthClient } from 'better-auth/react';
+import * as SecureStore from 'expo-secure-store';
 
 export const authClient = createAuthClient({
   baseURL: process.env.EXPO_PUBLIC_API_URL,
+  plugins: [
+    expoClient({
+      scheme: 'knowyourmeals',
+      storage: {
+        getItem: (key) => SecureStore.getItem(key),
+        setItem: (key, value) => SecureStore.setItem(key, value),
+      },
+    }),
+  ],
 });
