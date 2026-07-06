@@ -8,6 +8,13 @@
       "when": 1783186393569,
       "tag": "0000_clever_celestials",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783317447203,
+      "tag": "0001_daily_yellowjacket",
+      "breakpoints": true
     }
   ]
 }

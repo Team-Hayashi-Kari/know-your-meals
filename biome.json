@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/dist", "!**/.expo", "!**/node_modules", "!**/*.d.ts", "!**/.wrangler", "!**/.turbo", "!**/.vscode"]
+    "includes": ["**", "!**/dist", "!**/.expo", "!**/node_modules", "!**/*.d.ts", "!**/.wrangler", "!**/.turbo", "!**/drizzle", "!**/.vscode"]
   },
   "linter": {
     "enabled": true,
