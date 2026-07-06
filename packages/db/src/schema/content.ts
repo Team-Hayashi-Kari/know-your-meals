@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { doublePrecision, index, integer, pgEnum, pgTable, serial, text, timestamp, uuid, uniqueIndex } from 'drizzle-orm/pg-core';
+import { doublePrecision, index, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { user } from './auth';
 
 export const pinEmojiEnum = pgEnum('pin_emoji', ['🍜', '🍣', '🍛', '🍙', '🍔', '🍕', '🥩', '🍰', '🍺', '🥟']);
@@ -23,19 +23,23 @@ export const shops = pgTable(
   (table) => [index('shops_lat_lng_idx').on(table.lat, table.lng)],
 );
 
-export const images = pgTable('images', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: text('user_id')
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  key: text('key').notNull(),
-  status: imageStatusEnum('status').notNull().default('pending'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-}, (table) => [index('images_user_id_idx').on(table.userId)]);
+export const images = pgTable(
+  'images',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    key: text('key').notNull(),
+    status: imageStatusEnum('status').notNull().default('pending'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index('images_user_id_idx').on(table.userId)],
+);
 
 export const posts = pgTable(
   'posts',
@@ -63,7 +67,6 @@ export const posts = pgTable(
     index('posts_shop_id_idx').on(table.shopId),
     uniqueIndex('posts_image_id_unique').on(table.imageId),
   ],
-
 );
 
 export const shopsRelations = relations(shops, ({ many }) => ({

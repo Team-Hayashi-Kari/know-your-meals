@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm';
 import { index, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { user } from './auth';
-import { posts, shops, images } from './content';
+import { images, posts, shops } from './content';
 
 export const friendshipStatusEnum = pgEnum('friendship_status', ['pending', 'accepted', 'denied']);
 
@@ -52,7 +52,7 @@ export const friendships = pgTable(
 export const postsRelations = relations(posts, ({ one, many }) => ({
   user: one(user, { fields: [posts.userId], references: [user.id] }),
   shop: one(shops, { fields: [posts.shopId], references: [shops.id] }),
-  image: one(images, { fields: [posts.imageId], references: [images.id] }),  // 追加
+  image: one(images, { fields: [posts.imageId], references: [images.id] }), // 追加
   bookmarks: many(bookmarks),
 }));
 
