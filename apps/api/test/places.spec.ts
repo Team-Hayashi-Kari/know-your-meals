@@ -1,17 +1,22 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test';
-import type { Context } from 'hono';
 import type { PlaceResult } from '../src/lib/places';
 import type { Env } from '../src/types';
+
+// `getSession` の戻り値を各テストで切り替える
+let mockSessionValue: unknown = { user: { id: 'user1', name: 'Test User', email: 'test@example.com' } };
+
+mock.module('../src/lib/auth', () => ({
+  createAuth: () => ({
+    api: { getSession: async () => mockSessionValue },
+    handler: async () => new Response('', { status: 404 }),
+  }),
+}));
 
 const mockSearchPlaces = mock<(apiKey: string, params: { query: string; lat: number; lng: number }) => Promise<PlaceResult[]>>(() =>
   Promise.resolve([]),
 );
-const mockRequireAuth = mock(async (_c: unknown, next: () => Promise<void>) => {
-  await next();
-});
 
 mock.module('../src/lib/places', () => ({ searchPlaces: mockSearchPlaces }));
-mock.module('../src/middleware/auth', () => ({ requireAuth: mockRequireAuth }));
 
 const { default: app } = await import('../src/index');
 
@@ -40,17 +45,12 @@ describe('GET /api/places/search', () => {
   beforeEach(() => {
     mockSearchPlaces.mockReset();
     mockSearchPlaces.mockResolvedValue([]);
-    mockRequireAuth.mockReset();
-    mockRequireAuth.mockImplementation(async (_c: unknown, next: () => Promise<void>) => {
-      await next();
-    });
+    mockSessionValue = { user: { id: 'user1', name: 'Test User', email: 'test@example.com' } };
   });
 
   describe('認証', () => {
     it('未ログインだと 401 を返す', async () => {
-      mockRequireAuth.mockImplementation((c: unknown, _next: unknown) => {
-        return (c as Context<Env>).json({ error: 'Unauthorized' }, 401) as unknown as Promise<void>;
-      });
+      mockSessionValue = null;
 
       const res = await req('/api/places/search?lat=35.68&lng=139.76');
       expect(res.status).toBe(401);
