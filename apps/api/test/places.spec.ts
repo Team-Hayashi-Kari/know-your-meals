@@ -3,8 +3,8 @@ import type { Context } from 'hono';
 import type { PlaceResult } from '../src/lib/places';
 import type { Env } from '../src/types';
 
-const mockSearchPlaces = mock<(apiKey: string, params: { query: string; lat: number; lng: number }) => Promise<PlaceResult[]>>(
-  () => Promise.resolve([]),
+const mockSearchPlaces = mock<(apiKey: string, params: { query: string; lat: number; lng: number }) => Promise<PlaceResult[]>>(() =>
+  Promise.resolve([]),
 );
 const mockRequireAuth = mock(async (_c: unknown, next: () => Promise<void>) => {
   await next();
