@@ -49,8 +49,7 @@ export const images = pgTable(
   {
     id: serial('id').primaryKey(),
     postId: integer('post_id')
-      .notNull()
-      .references(() => posts.id, { onDelete: 'cascade' }),
+      .references(() => posts.id, { onDelete: 'set null' }),
     key: text('key').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
