@@ -1,0 +1,9 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "moduleResolution": "bundler",
+        "rootDir": "..",
+        "types": ["bun"]
+    },
+    "include": ["../**/*.ts", "../worker-configuration.d.ts"]
+}
