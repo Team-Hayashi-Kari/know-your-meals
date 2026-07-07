@@ -22,6 +22,13 @@
       "when": 1783419768370,
       "tag": "0002_sticky_pixie",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783425808921,
+      "tag": "0003_curvy_madame_web",
+      "breakpoints": true
     }
   ]
 }
