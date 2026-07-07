@@ -1,6 +1,13 @@
 {
   "expo": {
-    "plugins": [["expo-router", { "root": "src" }]],
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "root": "src/app"
+        }
+      ]
+    ],
     "name": "mobile",
     "slug": "mobile",
     "scheme": "knowyourmeals",
