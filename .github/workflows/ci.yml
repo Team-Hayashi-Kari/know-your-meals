@@ -1,9 +1,11 @@
-# .github/workflows/ci.yml
 name: CI
 on:
   pull_request:
   push:
     branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   lint-and-format:
@@ -14,7 +16,7 @@ jobs:
         with:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
-      - run: bunx biome ci .   # lint + format両方を非破壊チェック
+      - run: bunx biome ci . # lint + format両方を非破壊チェック
 
   typecheck:
     runs-on: ubuntu-latest
@@ -24,4 +26,16 @@ jobs:
         with:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
-      - run: bun run typecheck   # turbo run typecheck
+      - run: bun run typecheck # turbo run typecheck
+
+  api-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - name: Run API tests
+        working-directory: apps/api
+        run: bun test
