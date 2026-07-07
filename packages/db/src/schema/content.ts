@@ -32,7 +32,6 @@ export const posts = pgTable(
     shopId: integer('shop_id')
       .notNull()
       .references(() => shops.id, { onDelete: 'restrict' }),
-    imageURL: text('image_url').notNull(),
     comment: text('comment'),
     pin: pinEmojiEnum('pin').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
