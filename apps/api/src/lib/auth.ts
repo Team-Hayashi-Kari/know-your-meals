@@ -2,14 +2,9 @@ import { expo } from '@better-auth/expo';
 import { createDb } from '@repo/db';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import type { Bindings } from '../types';
 
-export function createAuth(env: {
-  DATABASE_URL: string;
-  BETTER_AUTH_SECRET: string;
-  BETTER_AUTH_URL: string;
-  GOOGLE_CLIENT_ID: string;
-  GOOGLE_CLIENT_SECRET: string;
-}) {
+export function createAuth(env: Bindings) {
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
