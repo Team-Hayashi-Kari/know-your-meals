@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { doublePrecision, index, integer, pgEnum, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { doublePrecision, index, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { user } from './auth';
 
 export const pinEmojiEnum = pgEnum('pin_emoji', ['🍜', '🍣', '🍛', '🍙', '🍔', '🍕', '🥩', '🍰', '🍺', '🥟']);
@@ -43,6 +43,23 @@ export const posts = pgTable(
   },
   (table) => [index('posts_user_id_idx').on(table.userId), index('posts_shop_id_idx').on(table.shopId)],
 );
+
+export const images = pgTable(
+  'images',
+  {
+    id: serial('id').primaryKey(),
+    postId: integer('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    key: text('key').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex('images_post_id_idx').on(table.postId)],
+);
+
+export const imagesRelations = relations(images, ({ one }) => ({
+  post: one(posts, { fields: [images.postId], references: [posts.id] }),
+}));
 
 export const shopsRelations = relations(shops, ({ many }) => ({
   posts: many(posts),
