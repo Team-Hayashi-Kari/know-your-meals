@@ -15,6 +15,13 @@
       "when": 1783317447203,
       "tag": "0001_daily_yellowjacket",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783419768370,
+      "tag": "0002_sticky_pixie",
+      "breakpoints": true
     }
   ]
 }
