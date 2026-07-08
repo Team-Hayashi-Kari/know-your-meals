@@ -1,29 +1,89 @@
-import { createDb, user } from '@repo/db';
-import { eq } from 'drizzle-orm';
+import { createDb, friendships, user } from '@repo/db';
+import { and, desc, eq, or } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { Hono } from 'hono';
 import { requireAuth } from '../middleware/auth';
 import type { Env } from '../types';
 
-export const me = new Hono<Env>().get('/', requireAuth, async (c) => {
-  const authUser = c.get('user');
-  const db = createDb(c.env.DATABASE_URL);
-  try {
-    const [row] = await db
-      .select({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        image: user.image,
-        handle: user.handle,
-        bio: user.bio,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      })
-      .from(user)
-      .where(eq(user.id, authUser.id));
-    if (!row) return c.json({ error: 'User not found' }, 404);
-    return c.json(row);
-  } catch {
-    return c.json({ error: 'Internal server error' }, 500);
-  }
-});
+const requester = alias(user, 'requester');
+const addressee = alias(user, 'addressee');
+
+type FriendUser = {
+  id: string;
+  handle: string | null;
+  name: string;
+  image: string | null;
+  bio: string | null;
+};
+
+export const me = new Hono<Env>()
+  .get('/', requireAuth, async (c) => {
+    const authUser = c.get('user');
+    const db = createDb(c.env.DATABASE_URL);
+    try {
+      const [row] = await db
+        .select({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+          handle: user.handle,
+          bio: user.bio,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        })
+        .from(user)
+        .where(eq(user.id, authUser.id));
+      if (!row) return c.json({ error: 'User not found' }, 404);
+      return c.json(row);
+    } catch {
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  })
+  .get('/friends', requireAuth, async (c) => {
+    const authUser = c.get('user');
+    const db = createDb(c.env.DATABASE_URL);
+
+    try {
+      const rows = await db
+        .select({
+          requesterId: friendships.requesterId,
+          requester: {
+            id: requester.id,
+            handle: requester.handle,
+            name: requester.name,
+            image: requester.image,
+            bio: requester.bio,
+          },
+          addressee: {
+            id: addressee.id,
+            handle: addressee.handle,
+            name: addressee.name,
+            image: addressee.image,
+            bio: addressee.bio,
+          },
+        })
+        .from(friendships)
+        .innerJoin(requester, eq(friendships.requesterId, requester.id))
+        .innerJoin(addressee, eq(friendships.addresseeId, addressee.id))
+        .where(and(eq(friendships.status, 'accepted'), or(eq(friendships.requesterId, authUser.id), eq(friendships.addresseeId, authUser.id))))
+        .orderBy(desc(friendships.updatedAt), desc(friendships.createdAt));
+
+      const friends = rows
+        .map((row) => {
+          const friend = row.requesterId === authUser.id ? row.addressee : row.requester;
+          return {
+            id: friend.id,
+            handle: friend.handle,
+            name: friend.name,
+            image: friend.image,
+            bio: friend.bio,
+          } satisfies FriendUser;
+        })
+        .filter((friend) => friend.id !== authUser.id);
+
+      return c.json(friends);
+    } catch {
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  });
