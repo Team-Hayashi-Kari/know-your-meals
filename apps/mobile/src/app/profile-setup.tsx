@@ -25,12 +25,7 @@ export default function ProfileSetupScreen() {
         <Text color="#555" fontSize={13} fontWeight="600">
           ステップ 1 / 2
         </Text>
-        <Text
-          color="#555"
-          fontSize={13}
-          fontWeight="600"
-          onPress={() => router.replace('/home')}
-        >
+        <Text color="#555" fontSize={13} fontWeight="600" onPress={() => router.replace('/home')}>
           スキップ
         </Text>
       </XStack>

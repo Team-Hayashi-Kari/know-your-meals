@@ -38,12 +38,7 @@ export default function FindFriendsScreen() {
           <Text color="#555" fontSize={13} fontWeight="600">
             ステップ 2 / 2
           </Text>
-          <Text
-            color="#555"
-            fontSize={13}
-            fontWeight="600"
-            onPress={() => router.replace('/home')}
-          >
+          <Text color="#555" fontSize={13} fontWeight="600" onPress={() => router.replace('/home')}>
             スキップ
           </Text>
         </XStack>
@@ -73,26 +68,11 @@ export default function FindFriendsScreen() {
         />
 
         {/* 検索結果 */}
-        <YStack gap="$3">
-          {loading ? (
-            <Spinner color="#555" marginTop="$4" />
-          ) : (
-            results.map((user) => <UserRow key={user.id} user={user} />)
-          )}
-        </YStack>
+        <YStack gap="$3">{loading ? <Spinner color="#555" marginTop="$4" /> : results.map((user) => <UserRow key={user.id} user={user} />)}</YStack>
       </ScrollView>
 
       {/* 画面の底に固定する「はじめる」ボタン */}
-      <YStack
-        position="absolute"
-        bottom={0}
-        left={0}
-        right={0}
-        backgroundColor="#000"
-        paddingHorizontal="$6"
-        paddingBottom="$8"
-        paddingTop="$3"
-      >
+      <YStack position="absolute" bottom={0} left={0} right={0} backgroundColor="#000" paddingHorizontal="$6" paddingBottom="$8" paddingTop="$3">
         <Button
           onPress={() => router.replace('/home')}
           backgroundColor="#fff"
@@ -123,14 +103,7 @@ function UserRow({ user }: { user: UserSearchResult }) {
 
   return (
     <XStack alignItems="center" gap="$3">
-      <YStack
-        width={44}
-        height={44}
-        borderRadius={22}
-        backgroundColor={getColorFromName(user.name)}
-        justifyContent="center"
-        alignItems="center"
-      >
+      <YStack width={44} height={44} borderRadius={22} backgroundColor={getColorFromName(user.name)} justifyContent="center" alignItems="center">
         <Text color="#fff" fontSize={18} fontWeight="700">
           {getInitial(user.name)}
         </Text>
@@ -150,14 +123,7 @@ function UserRow({ user }: { user: UserSearchResult }) {
           申請中
         </Text>
       ) : (
-        <Button
-          onPress={handleSend}
-          disabled={sending}
-          backgroundColor="#1a1a1a"
-          borderRadius="$4"
-          height={36}
-          paddingHorizontal="$4"
-        >
+        <Button onPress={handleSend} disabled={sending} backgroundColor="#1a1a1a" borderRadius="$4" height={36} paddingHorizontal="$4">
           <Text color="#ffd400" fontSize={13} fontWeight="700">
             申請する
           </Text>
