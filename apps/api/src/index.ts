@@ -13,9 +13,9 @@ const apiCors = cors({
 
 const app = new Hono<Env>()
   .get('/health', (c) => c.json({ status: 'ok' }))
-  .use('/api/auth/**', apiCors)
-  .use('/api/places/**', apiCors)
-  .on(['GET', 'POST'], '/api/auth/**', (c) => {
+  .use('/api/auth/*', apiCors)
+  .use('/api/places/*', apiCors)
+  .on(['GET', 'POST'], '/api/auth/*', (c) => {
     return createAuth(c.env).handler(c.req.raw);
   })
   .route('/api/places', places);
