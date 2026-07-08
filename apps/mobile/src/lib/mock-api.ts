@@ -47,9 +47,7 @@ export async function getMe(): Promise<MeProfile> {
 }
 
 // PATCH /api/me 相当
-export async function updateMe(
-  data: Partial<Pick<MeProfile, 'name' | 'handle' | 'bio' | 'image'>>,
-): Promise<MeProfile> {
+export async function updateMe(data: Partial<Pick<MeProfile, 'name' | 'handle' | 'bio' | 'image'>>): Promise<MeProfile> {
   await delay(300);
   // 本物のAPIでは、ここで handle の重複チェック(409)が入る
   mockMe = { ...mockMe, ...data };
