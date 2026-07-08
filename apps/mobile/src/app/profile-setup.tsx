@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Button, Input, Text, XStack, YStack } from 'tamagui';
+import { ScrollView, Button, Input, Text, XStack, YStack } from 'tamagui';
 
 export default function ProfileSetupScreen() {
   const router = useRouter();
@@ -10,12 +10,15 @@ export default function ProfileSetupScreen() {
   const [bio, setBio] = useState('');
 
   return (
-    <YStack
+    <ScrollView
       flex={1}
       backgroundColor="#000"
-      paddingHorizontal="$6"
-      paddingTop="$16"
-      paddingBottom="$8"
+      contentContainerStyle={{
+        flexGrow: 1,
+        paddingHorizontal: 24,
+        paddingTop: 64,
+        paddingBottom: 32,
+      }}
     >
       {/* 上部：ステップ表示 と スキップ */}
       <XStack justifyContent="space-between" alignItems="center" marginBottom="$6">
@@ -37,7 +40,7 @@ export default function ProfileSetupScreen() {
         プロフィールを{'\n'}設定しよう
       </Text>
 
-      {/* プロフィールアイコン（頭文字＋名前から決まる色） */}
+      {/* プロフィールアイコン */}
       <YStack alignItems="center" marginBottom="$8">
         <YStack
           width={96}
@@ -52,7 +55,6 @@ export default function ProfileSetupScreen() {
             {getInitial(name)}
           </Text>
 
-          {/* 右下の小さな＋バッジ */}
           <YStack
             position="absolute"
             bottom={0}
@@ -113,7 +115,7 @@ export default function ProfileSetupScreen() {
       </YStack>
 
       {/* 自己紹介 */}
-      <YStack gap="$2" marginBottom="$8">
+      <YStack gap="$2" marginBottom="$6">
         <Text color="#555" fontSize={14} fontWeight="600">
           自己紹介
         </Text>
@@ -135,33 +137,29 @@ export default function ProfileSetupScreen() {
       </YStack>
 
       {/* 下部：次へボタン */}
-      <YStack flex={1} justifyContent="flex-end">
-        <Button
-          onPress={() => router.replace('/home')}
-          backgroundColor="#fff"
-          pressStyle={{ backgroundColor: '#e8e8e8', scale: 0.97 }}
-          borderRadius="$5"
-          height={60}
-        >
-          <Text color="#000" fontWeight="700" fontSize={16}>
-            次へ
-          </Text>
-        </Button>
-      </YStack>
-    </YStack>
+      <Button
+        onPress={() => router.replace('/home')}
+        backgroundColor="#fff"
+        pressStyle={{ backgroundColor: '#e8e8e8', scale: 0.97 }}
+        borderRadius="$5"
+        height={60}
+        marginTop="$4"
+      >
+        <Text color="#000" fontWeight="700" fontSize={16}>
+          次へ
+        </Text>
+      </Button>
+    </ScrollView>
   );
 }
 
-// ===== ここから下は「道具（関数）」。画面の外に置く =====
-
-// 名前の頭文字を1文字返す（名前が空なら「?」）
+// ===== 道具（関数） =====
 function getInitial(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) return '?';
   return trimmed.charAt(0).toUpperCase();
 }
 
-// 名前から色を決める（同じ名前なら必ず同じ色になる）
 function getColorFromName(name: string): string {
   const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#e84393'];
   if (!name.trim()) return '#333';
