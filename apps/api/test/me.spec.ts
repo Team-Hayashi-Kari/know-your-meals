@@ -23,12 +23,16 @@ const MOCK_USER_ROW = {
 };
 
 let mockSelectResult: unknown[] = [MOCK_USER_ROW];
+let mockSelectError: Error | null = null;
 
 mock.module('@repo/db', () => ({
   createDb: () => ({
     select: () => ({
       from: () => ({
-        where: async () => mockSelectResult,
+        where: async () => {
+          if (mockSelectError) throw mockSelectError;
+          return mockSelectResult;
+        },
       }),
     }),
   }),
@@ -63,6 +67,7 @@ describe('GET /api/me', () => {
   beforeEach(() => {
     mockSessionValue = { user: { id: 'user1', name: 'Test User', email: 'test@example.com' } };
     mockSelectResult = [MOCK_USER_ROW];
+    mockSelectError = null;
   });
 
   describe('認証', () => {
@@ -105,14 +110,24 @@ describe('GET /api/me', () => {
   });
 
   describe('異常系', () => {
-    it('user 行が見つからない場合 500 を返す', async () => {
+    it('user 行が見つからない場合 404 を返す', async () => {
       mockSelectResult = [];
+
+      const res = await req('/api/me');
+      expect(res.status).toBe(404);
+
+      const body = await res.json();
+      expect(body).toEqual({ error: 'User not found' });
+    });
+
+    it('DB 問い合わせに失敗した場合 500 を返す', async () => {
+      mockSelectError = new Error('db error');
 
       const res = await req('/api/me');
       expect(res.status).toBe(500);
 
       const body = await res.json();
-      expect(body).toEqual({ error: 'User not found' });
+      expect(body).toEqual({ error: 'Internal server error' });
     });
   });
 });
