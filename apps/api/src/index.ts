@@ -23,9 +23,8 @@ const app = new Hono<Env>()
     return createAuth(c.env).handler(c.req.raw);
   })
   .route('/api/places', places)
-  .route('/api/friendships', friendshipsRoute);
-  .route('/api/me', me)
-  .route('/api/places', places);
+  .route('/api/friendships', friendshipsRoute)
+  .route('/api/me', me);
 
 export type AppType = typeof app;
 export default app;
