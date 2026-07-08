@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import { index, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { user } from './auth';
 import { images, posts, shops } from './content';
@@ -42,7 +42,10 @@ export const friendships = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex('friendships_requester_addressee_idx').on(table.requesterId, table.addresseeId),
+    uniqueIndex('friendships_user_pair_idx').on(
+      sql`LEAST(${table.requesterId}, ${table.addresseeId})`,
+      sql`GREATEST(${table.requesterId}, ${table.addresseeId})`,
+    ),
     index('friendships_addressee_id_idx').on(table.addresseeId),
     index('friendships_requester_id_idx').on(table.requesterId),
   ],
