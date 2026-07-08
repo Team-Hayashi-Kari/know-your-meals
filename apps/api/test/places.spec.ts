@@ -27,6 +27,8 @@ const BINDINGS: Env['Bindings'] = {
   GOOGLE_CLIENT_ID: 'test-client-id',
   GOOGLE_CLIENT_SECRET: 'test-client-secret',
   GOOGLE_PLACES_API_KEY: 'test-api-key',
+  IMAGES_BUCKET: {} as R2Bucket,
+  IMAGES_BASE_URL: 'https://test.r2.dev',
 };
 
 const MOCK_PLACE: PlaceResult = {
