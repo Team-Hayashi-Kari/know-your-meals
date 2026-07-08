@@ -20,6 +20,6 @@ export const me = new Hono<Env>().get('/', requireAuth, async (c) => {
     })
     .from(user)
     .where(eq(user.id, authUser.id));
-  if (!row) return c.json({ error: 'User not found' }, 500);
+  if (!row) return c.json({ error: 'User not found' }, 404);
   return c.json(row);
 });
