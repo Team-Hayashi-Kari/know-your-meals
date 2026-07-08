@@ -53,18 +53,30 @@ const FRIEND_FROM_REQUESTER = {
 let mockSelectResult: unknown[] = [];
 let mockSelectError: Error | null = null;
 
-mock.module('@repo/db', () => {
-  const user = {
-    id: 'user.id',
-    name: 'user.name',
-    email: 'user.email',
-    image: 'user.image',
-    handle: 'user.handle',
-    bio: 'user.bio',
-    createdAt: 'user.createdAt',
-    updatedAt: 'user.updatedAt',
-  };
+const userColumns = {
+  id: 'user.id',
+  name: 'user.name',
+  email: 'user.email',
+  image: 'user.image',
+  handle: 'user.handle',
+  bio: 'user.bio',
+  createdAt: 'user.createdAt',
+  updatedAt: 'user.updatedAt',
+};
 
+const friendshipColumns = {
+  requesterId: 'friendships.requesterId',
+  addresseeId: 'friendships.addresseeId',
+  status: 'friendships.status',
+  createdAt: 'friendships.createdAt',
+  updatedAt: 'friendships.updatedAt',
+};
+
+const actualDrizzleOrm = await import('drizzle-orm');
+const eqMock = mock(actualDrizzleOrm.eq);
+mock.module('drizzle-orm', () => ({ ...actualDrizzleOrm, eq: eqMock }));
+
+mock.module('@repo/db', () => {
   return {
     createDb: () => ({
       select: () => ({
@@ -82,14 +94,8 @@ mock.module('@repo/db', () => {
         }),
       }),
     }),
-    friendships: {
-      requesterId: 'friendships.requesterId',
-      addresseeId: 'friendships.addresseeId',
-      status: 'friendships.status',
-      createdAt: 'friendships.createdAt',
-      updatedAt: 'friendships.updatedAt',
-    },
-    user,
+    friendships: friendshipColumns,
+    user: userColumns,
   };
 });
 
@@ -113,6 +119,7 @@ describe('GET /api/me/friends', () => {
     mockSessionValue = { user: { id: 'user1', name: 'Test User', email: 'test@example.com' } };
     mockSelectResult = [];
     mockSelectError = null;
+    eqMock.mockClear();
   });
 
   it('未ログインだと 401 を返す', async () => {
@@ -169,14 +176,11 @@ describe('GET /api/me/friends', () => {
     ]);
   });
 
-  it('pending / denied は返らない', async () => {
-    mockSelectResult = [];
-
+  it('accepted friendship のみ取得する条件で DB 問い合わせする', async () => {
     const res = await req('/api/me/friends');
-    const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body).toEqual([]);
+    expect(eqMock).toHaveBeenCalledWith(friendshipColumns.status, 'accepted');
   });
 
   it('自分自身の user 情報は返さない', async () => {
