@@ -1,8 +1,6 @@
-import { createDb, friendships, user } from '@repo/db';
+import { createDb, friendships, images, posts, shops, user } from '@repo/db';
 import { and, desc, eq, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-import { createDb, images, posts, shops, user } from '@repo/db';
-import { desc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { requireAuth } from '../middleware/auth';
 import type { Env } from '../types';
@@ -85,6 +83,10 @@ export const me = new Hono<Env>()
         .filter((friend) => friend.id !== authUser.id);
 
       return c.json(friends);
+    } catch {
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  })
   .get('/posts', requireAuth, async (c) => {
     const authUser = c.get('user');
     const db = createDb(c.env.DATABASE_URL);
