@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { createAuth } from './lib/auth';
 import { friendshipsRoute } from './routes/friendships';
+import { me } from './routes/me';
 import { places } from './routes/places';
 import type { Env } from './types';
 
@@ -15,6 +16,7 @@ const apiCors = cors({
 const app = new Hono<Env>()
   .get('/health', (c) => c.json({ status: 'ok' }))
   .use('/api/auth/*', apiCors)
+  .use('/api/me', apiCors)
   .use('/api/places/*', apiCors)
   .use('/api/friendships/*', apiCors)
   .on(['GET', 'POST'], '/api/auth/*', (c) => {
@@ -22,6 +24,8 @@ const app = new Hono<Env>()
   })
   .route('/api/places', places)
   .route('/api/friendships', friendshipsRoute);
+  .route('/api/me', me)
+  .route('/api/places', places);
 
 export type AppType = typeof app;
 export default app;

@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -50,7 +50,33 @@ jobs:
           projectName: know-your-meals
           directory: apps/mobile/dist
 
+      - name: Escape version for shields.io
+        id: version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          escaped="${REF_NAME//-/--}"
+          echo "escaped=$escaped" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          body: |
+            <div align="center">
+
+            # 🍚 Know Your Meals — ${{ github.ref_name }}
+
+            ![Version](https://img.shields.io/badge/version-${{ steps.version.outputs.escaped }}-ff6b6b?style=for-the-badge&logo=github)
+            ![Status](https://img.shields.io/badge/status-pre--release-orange?style=for-the-badge)
+            ![Bun](https://img.shields.io/badge/runtime-Bun-fbf0df?style=for-the-badge&logo=bun)
+
+            </div>
+
+            ---
+
+            ## ✨ このリリースのハイライト
+
+            > *(リリース後にここを編集してください)*
+
+            ---

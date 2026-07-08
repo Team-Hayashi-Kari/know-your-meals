@@ -1,0 +1,18 @@
+changelog:
+  categories:
+    - title: "🛠️ 機能追加・変更"
+      labels:
+        - backend
+        - frontend
+        - schema
+    - title: "🐛 バグ修正"
+      labels:
+        - bug
+    - title: "🔧 開発・インフラ"
+      labels:
+        - test/ci
+        - config
+        - dependencies
+    - title: "📄 ドキュメント"
+      labels:
+        - documentation
