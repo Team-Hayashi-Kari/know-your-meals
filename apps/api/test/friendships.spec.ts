@@ -36,7 +36,6 @@ mock.module('@repo/db', () => ({ ...actualDb, createDb: () => mockDb }));
 
 const { default: app } = await import('../src/index');
 
-
 const CURRENT_USER_ID = 'user1';
 const TARGET_USER = { id: 'user2', name: 'Target User', email: 'target@example.com', handle: 'target-handle' };
 

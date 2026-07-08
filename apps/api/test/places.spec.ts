@@ -20,7 +20,6 @@ mock.module('../src/lib/places', () => ({ searchPlaces: mockSearchPlaces }));
 
 const { default: app } = await import('../src/index');
 
-
 const MOCK_PLACE: PlaceResult = {
   name: '麺屋テスト',
   address: '東京都渋谷区テスト1-2-3',

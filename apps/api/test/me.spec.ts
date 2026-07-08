@@ -50,7 +50,6 @@ mock.module('@repo/db', () => ({
 
 const { default: app } = await import('../src/index');
 
-
 function req(path: string, init?: RequestInit) {
   return app.request(path, init, BINDINGS);
 }
