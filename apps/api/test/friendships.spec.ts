@@ -152,6 +152,19 @@ describe('POST /api/friendships', () => {
     expect(res.status).toBe(409);
   });
 
+  it('逆方向の申請が既にある場合は新しい申請を作成せず 409 を返す', async () => {
+    const existingRow = { id: 11, requesterId: TARGET_USER.id, addresseeId: CURRENT_USER_ID, status: 'pending' };
+    selectResultsQueue = [[TARGET_USER], [existingRow]];
+
+    const res = await postFriendship({ id: TARGET_USER.id });
+
+    expect(res.status).toBe(409);
+    expect(eqMock).toHaveBeenCalledWith(actualDb.friendships.requesterId, TARGET_USER.id);
+    expect(eqMock).toHaveBeenCalledWith(actualDb.friendships.addresseeId, CURRENT_USER_ID);
+    expect(insertValuesMock).not.toHaveBeenCalled();
+    expect(updateSetMock).not.toHaveBeenCalled();
+  });
+
   it('id も handle も無ければ 400 を返す', async () => {
     const res = await postFriendship({});
 
