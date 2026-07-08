@@ -9,6 +9,8 @@ export type Bindings = {
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   GOOGLE_PLACES_API_KEY: string;
+  IMAGES_BUCKET: R2Bucket;
+  IMAGES_BASE_URL: string;
 };
 
 export type Env = {
