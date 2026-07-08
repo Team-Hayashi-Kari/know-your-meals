@@ -53,10 +53,7 @@ export const friendshipsRoute = new Hono<Env>().post('/', requireAuth, async (c)
     );
 
   if (existing) {
-    if (existing.requesterId !== currentUser.id) {
-      return c.json({ error: 'Friendship request already exists' }, 409);
-    }
-    if (existing.status === 'pending' || existing.status === 'accepted') {
+    if (existing.requesterId !== currentUser.id || existing.status === 'pending' || existing.status === 'accepted') {
       return c.json({ error: 'Friendship request already exists' }, 409);
     }
     const [updated] = await db.update(friendships).set({ status: 'pending' }).where(eq(friendships.id, existing.id)).returning();
