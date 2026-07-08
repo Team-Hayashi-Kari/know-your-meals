@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test';
 import type { PlaceResult } from '../src/lib/places';
-import type { Env } from '../src/types';
+import { BINDINGS } from './helpers';
 
 // `getSession` の戻り値を各テストで切り替える
 let mockSessionValue: unknown = { user: { id: 'user1', name: 'Test User', email: 'test@example.com' } };
@@ -20,16 +20,6 @@ mock.module('../src/lib/places', () => ({ searchPlaces: mockSearchPlaces }));
 
 const { default: app } = await import('../src/index');
 
-const BINDINGS: Env['Bindings'] = {
-  DATABASE_URL: 'postgres://test',
-  BETTER_AUTH_SECRET: 'test-secret',
-  BETTER_AUTH_URL: 'http://localhost:8787',
-  GOOGLE_CLIENT_ID: 'test-client-id',
-  GOOGLE_CLIENT_SECRET: 'test-client-secret',
-  GOOGLE_PLACES_API_KEY: 'test-api-key',
-  IMAGES_BUCKET: {} as R2Bucket,
-  IMAGES_BASE_URL: 'https://test.r2.dev',
-};
 
 const MOCK_PLACE: PlaceResult = {
   name: '麺屋テスト',
