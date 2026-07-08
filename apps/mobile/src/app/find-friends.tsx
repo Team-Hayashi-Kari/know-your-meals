@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, Button, Input, Spinner, Text, XStack, YStack } from 'tamagui';
+import { Button, Input, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
 import { searchUsers, sendFriendRequest, type UserSearchResult } from '../lib/mock-api';
 
 export default function FindFriendsScreen() {

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Button, Input, Text, XStack, YStack } from 'tamagui';
+import { Button, Input, ScrollView, Text, XStack, YStack } from 'tamagui';
 
 export default function ProfileSetupScreen() {
   const router = useRouter();
