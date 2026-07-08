@@ -1,0 +1,51 @@
+backend:
+  - changed-files:
+      - any-glob-to-any-file: "apps/api/**"
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: "apps/mobile/**"
+
+schema:
+  - changed-files:
+      - any-glob-to-any-file: "packages/db/**"
+
+test/ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.test.ts"
+          - "**/*.test.tsx"
+          - "**/*.spec.ts"
+          - "apps/api/test/**"
+          - ".github/workflows/**"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - ".github/ISSUE_TEMPLATE/**"
+          - ".github/RELEASE_TEMPLATE.md"
+          - ".github/pull_request_template.md"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/package.json"
+          - "**/bun.lock"
+          - "**/bun.lockb"
+
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "biome.json"
+          - "turbo.json"
+          - "**/tsconfig.json"
+          - "**/.env.example"
+          - "wrangler.toml"
+          - "**/wrangler.toml"
+
+bug:
+  - head-branch: ["^fix/", "^bugfix/", "^hotfix/"]
+  - title:
+      - "^fix[:(]"
+      - "^🐛"
