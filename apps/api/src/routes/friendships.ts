@@ -1,5 +1,5 @@
 import { createDb, friendships, user } from '@repo/db';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { requireAuth } from '../middleware/auth';
 import type { Env } from '../types';
@@ -45,9 +45,17 @@ export const friendshipsRoute = new Hono<Env>().post('/', requireAuth, async (c)
   const [existing] = await db
     .select()
     .from(friendships)
-    .where(and(eq(friendships.requesterId, currentUser.id), eq(friendships.addresseeId, target.id)));
+    .where(
+      or(
+        and(eq(friendships.requesterId, currentUser.id), eq(friendships.addresseeId, target.id)),
+        and(eq(friendships.requesterId, target.id), eq(friendships.addresseeId, currentUser.id)),
+      ),
+    );
 
   if (existing) {
+    if (existing.requesterId !== currentUser.id) {
+      return c.json({ error: 'Friendship request already exists' }, 409);
+    }
     if (existing.status === 'pending' || existing.status === 'accepted') {
       return c.json({ error: 'Friendship request already exists' }, 409);
     }
