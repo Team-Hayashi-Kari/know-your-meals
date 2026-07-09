@@ -324,4 +324,18 @@ describe('PATCH /api/friendships/:id', () => {
     expect(res.status).toBe(400);
     expect(updateSetMock).not.toHaveBeenCalled();
   });
+
+  it('id が数値でなければ 400 を返す（DB 問い合わせなし）', async () => {
+    const res = await patchFriendship('abc', { status: 'accepted' });
+
+    expect(res.status).toBe(400);
+    expect(updateSetMock).not.toHaveBeenCalled();
+  });
+
+  it('id が 0 以下なら 400 を返す（DB 問い合わせなし）', async () => {
+    const res = await patchFriendship(-1, { status: 'accepted' });
+
+    expect(res.status).toBe(400);
+    expect(updateSetMock).not.toHaveBeenCalled();
+  });
 });
