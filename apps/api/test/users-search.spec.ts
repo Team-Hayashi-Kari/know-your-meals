@@ -93,7 +93,7 @@ describe('GET /api/users/search', () => {
 
   it('ヒットしたユーザーを返し、最終ページなら nextPage が null', async () => {
     // count → [5件], select → [USER_A, USER_B]
-    selectFromWhereMock = mock(() => Promise.resolve(selectFromWhereMock.mock.calls.length === 1 ? [{ total: 2 }] : [USER_A, USER_B]));
+    selectFromWhereMock = mock(() => Promise.resolve((selectFromWhereMock.mock.calls.length === 1 ? [{ total: 2 }] : [USER_A, USER_B]) as MockRow[]));
 
     const res = await search({ q: 'alice' });
     expect(res.status).toBe(200);
@@ -105,7 +105,7 @@ describe('GET /api/users/search', () => {
     let call = 0;
     selectFromWhereMock = mock(() => {
       call++;
-      return Promise.resolve(call === 1 ? [{ total: 100 }] : [USER_A]);
+      return Promise.resolve((call === 1 ? [{ total: 100 }] : [USER_A]) as MockRow[]);
     });
 
     const res = await search({ q: 'alice', page: '1', limit: '1' });
