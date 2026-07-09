@@ -3,6 +3,12 @@ name: Claude Auto Review
 on:
   pull_request:
     types: [opened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: string
 
 jobs:
   claude-auto-review:
