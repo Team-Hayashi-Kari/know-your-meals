@@ -118,4 +118,18 @@ describe('GET /api/users/search', () => {
     const res = await app.request('/api/users/search', { method: 'GET' }, BINDINGS);
     expect(res.status).toBe(400);
   });
+
+  it('DB エラー時は 500 を返す', async () => {
+    let callCount = 0;
+    selectFromWhereMock = mock(() => {
+      callCount++;
+      // 1回目（count クエリ）だけ reject。2回目以降は解決させて unhandled rejection を防ぐ
+      if (callCount === 1) return Promise.reject(new Error('db error'));
+      return Promise.resolve([]);
+    });
+    const res = await search({ q: 'alice' });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body).toEqual({ error: 'Internal server error' });
+  });
 });
