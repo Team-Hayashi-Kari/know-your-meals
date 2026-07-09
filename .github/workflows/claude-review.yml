@@ -26,4 +26,5 @@ jobs:
           additional_permissions: |
             actions: read
           use_sticky_comment: true
+          show_full_output: true
           prompt: 'このPRのコードをレビューしてください。変更内容の概要、潜在的な問題点、改善提案をまとめてください。'
