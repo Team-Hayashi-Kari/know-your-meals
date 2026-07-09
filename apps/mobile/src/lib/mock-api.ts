@@ -205,7 +205,8 @@ export async function getNearbyPosts(lat: number, lng: number): Promise<NearbyPo
   // 本物のAPIでは lat/lng から算出した bbox で範囲検索する
   void lat;
   void lng;
-  return mockNearbyPosts;
+  // 表示はフレンド公開範囲のみ（Issue #70 備考）
+  return mockNearbyPosts.filter((p) => p.isFriendPost);
 }
 
 // GET /api/posts/:id 相当
