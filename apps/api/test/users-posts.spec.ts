@@ -29,6 +29,7 @@ let userResult: { id: string }[] = [{ id: 'user1' }];
 let totalCount = 0;
 let postRows: PostRow[] = [];
 let selectCallCount = 0;
+let mockDbError: Error | null = null;
 
 const mockDb = {
   select: (_fields?: unknown) => {
@@ -39,7 +40,7 @@ const mockDb = {
       return {
         from: () => ({
           leftJoin: () => ({
-            where: () => Promise.resolve(userResult),
+            where: () => (mockDbError ? Promise.reject(mockDbError) : Promise.resolve(userResult)),
           }),
         }),
       };
@@ -48,7 +49,7 @@ const mockDb = {
       // count: from(posts).where()
       return {
         from: () => ({
-          where: () => Promise.resolve([{ total: totalCount }]),
+          where: () => (mockDbError ? Promise.reject(mockDbError) : Promise.resolve([{ total: totalCount }])),
         }),
       };
     }
@@ -60,7 +61,7 @@ const mockDb = {
             where: () => ({
               orderBy: () => ({
                 limit: () => ({
-                  offset: () => Promise.resolve(postRows),
+                  offset: () => (mockDbError ? Promise.reject(mockDbError) : Promise.resolve(postRows)),
                 }),
               }),
             }),
@@ -117,6 +118,7 @@ describe('GET /api/users/:handle/posts', () => {
     totalCount = 0;
     postRows = [];
     selectCallCount = 0;
+    mockDbError = null;
   });
 
   it('未ログインだと 401 を返す', async () => {
@@ -227,5 +229,13 @@ describe('GET /api/users/:handle/posts', () => {
   it('limit が空文字のとき 400 を返す', async () => {
     const res = await req('/api/users/myhandle/posts?limit=');
     expect(res.status).toBe(400);
+  });
+
+  it('DB エラー時は 500 を返す', async () => {
+    mockDbError = new Error('db error');
+    const res = await req('/api/users/myhandle/posts');
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body).toEqual({ error: 'Internal server error' });
   });
 });
