@@ -99,4 +99,29 @@ export const friendshipsRoute = new Hono<Env>()
     }
 
     return c.json(updated);
+  })
+  .delete('/:id', requireAuth, async (c) => {
+    const currentUser = c.get('user');
+    const id = Number(c.req.param('id'));
+    if (!Number.isInteger(id) || id <= 0) return c.json({ error: 'Invalid friendship id' }, 400);
+
+    const db = createDb(c.env.DATABASE_URL);
+    const [deleted] = await db
+      .delete(friendships)
+      .where(
+        and(
+          eq(friendships.id, id),
+          or(
+            and(eq(friendships.status, 'pending'), eq(friendships.requesterId, currentUser.id)),
+            and(eq(friendships.status, 'accepted'), or(eq(friendships.requesterId, currentUser.id), eq(friendships.addresseeId, currentUser.id))),
+          ),
+        ),
+      )
+      .returning();
+
+    if (!deleted) {
+      return c.json({ error: 'Friendship not found' }, 404);
+    }
+
+    return c.json(deleted);
   });
