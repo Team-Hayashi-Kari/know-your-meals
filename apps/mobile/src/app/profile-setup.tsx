@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Button, Input, ScrollView, Text, XStack, YStack } from 'tamagui';
+import { Button, Input, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
+import { updateMe } from '../lib/mock-api';
 
 export default function ProfileSetupScreen() {
   const router = useRouter();
@@ -8,6 +9,19 @@ export default function ProfileSetupScreen() {
   const [name, setName] = useState('');
   const [handle, setHandle] = useState('');
   const [bio, setBio] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // 「次へ」を押したときの処理：入力内容を保存してから次の画面へ
+  const handleNext = async () => {
+    setSaving(true);
+    try {
+      await updateMe({ name, handle, bio });
+      router.replace('/find-friends');
+    } catch (e) {
+      console.error('[プロフィール保存エラー]', e);
+      setSaving(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -133,16 +147,22 @@ export default function ProfileSetupScreen() {
 
       {/* 下部：次へボタン */}
       <Button
-        onPress={() => router.replace('/find-friends')}
+        onPress={handleNext}
+        disabled={saving}
         backgroundColor="#fff"
         pressStyle={{ backgroundColor: '#e8e8e8', scale: 0.97 }}
+        disabledStyle={{ opacity: 0.5 }}
         borderRadius="$5"
         height={60}
         marginTop="$4"
       >
-        <Text color="#000" fontWeight="700" fontSize={16}>
-          次へ
-        </Text>
+        {saving ? (
+          <Spinner color="#000" />
+        ) : (
+          <Text color="#000" fontWeight="700" fontSize={16}>
+            次へ
+          </Text>
+        )}
       </Button>
     </ScrollView>
   );
