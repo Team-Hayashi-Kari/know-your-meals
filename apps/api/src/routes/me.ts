@@ -194,6 +194,45 @@ export const me = new Hono<Env>()
       return c.json({ error: 'Internal server error' }, 500);
     }
   })
+  .get('/friend-requests', requireAuth, async (c) => {
+    const direction = c.req.query('direction');
+    if (direction !== 'received') return c.json({ error: 'Invalid direction' }, 400);
+
+    const authUser = c.get('user');
+    const db = createDb(c.env.DATABASE_URL);
+
+    try {
+      const rows = await db
+        .select({
+          requester: {
+            id: requester.id,
+            handle: requester.handle,
+            name: requester.name,
+            image: requester.image,
+            bio: requester.bio,
+          },
+        })
+        .from(friendships)
+        .innerJoin(requester, eq(friendships.requesterId, requester.id))
+        .where(and(eq(friendships.status, 'pending'), eq(friendships.addresseeId, authUser.id)))
+        .orderBy(desc(friendships.createdAt));
+
+      return c.json(
+        rows.map(
+          (row) =>
+            ({
+              id: row.requester.id,
+              handle: row.requester.handle,
+              name: row.requester.name,
+              image: row.requester.image,
+              bio: row.requester.bio,
+            }) satisfies FriendUser,
+        ),
+      );
+    } catch {
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  })
   .get('/posts', requireAuth, async (c) => {
     const authUser = c.get('user');
     const db = createDb(c.env.DATABASE_URL);
