@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Pressable } from 'react-native';
 import { Text, XStack } from 'tamagui';
 
 type MiniHeaderProps = {
@@ -12,9 +13,11 @@ export function MiniHeader({ title, onBack, rightAction }: MiniHeaderProps) {
   return (
     <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$5" paddingVertical="$3">
       <XStack alignItems="center" gap="$3">
-        <Text fontSize={22} color="#fff" onPress={onBack}>
-          ←
-        </Text>
+        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="戻る">
+          <Text fontSize={22} color="#fff">
+            ←
+          </Text>
+        </Pressable>
         {title ? (
           <Text fontSize={19} fontWeight="800" color="#fff" letterSpacing={-0.5}>
             {title}
