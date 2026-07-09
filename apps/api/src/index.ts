@@ -6,6 +6,7 @@ import { imagesRoute } from './routes/images';
 import { me } from './routes/me';
 import { places } from './routes/places';
 import { postsRoute } from './routes/posts';
+import { usersRoute } from './routes/users';
 import type { Env } from './types';
 
 const apiCors = cors({
@@ -23,6 +24,7 @@ const app = new Hono<Env>()
   .use('/api/posts/*', apiCors)
   .use('/api/friendships/*', apiCors)
   .use('/api/images/*', apiCors)
+  .use('/api/users/*', apiCors)
   .on(['GET', 'POST'], '/api/auth/*', (c) => {
     return createAuth(c.env).handler(c.req.raw);
   })
@@ -30,7 +32,8 @@ const app = new Hono<Env>()
   .route('/api/places', places)
   .route('/api/friendships', friendshipsRoute)
   .route('/api/posts', postsRoute)
-  .route('/api/images', imagesRoute);
+  .route('/api/images', imagesRoute)
+  .route('/api/users', usersRoute);
 
 export type AppType = typeof app;
 export default app;
