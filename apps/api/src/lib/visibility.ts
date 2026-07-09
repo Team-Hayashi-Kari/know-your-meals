@@ -1,5 +1,5 @@
 import { posts } from '@repo/db';
-import { friendshipPairCondition as friendshipPairConditionBase } from './friendship';
+import { friendshipPairCondition } from './friendship';
 
-/** userId と posts.userId が友達関係（双方向どちらの向きでも）にあるかを判定する join 条件 */
-export const friendshipPairCondition = (userId: string) => friendshipPairConditionBase(userId, posts.userId);
+/** 投稿の閲覧者（userId）と投稿者（posts.userId）が友達関係（双方向どちらの向きでも）にあるかを判定する join 条件 */
+export const postFriendshipCondition = (userId: string) => friendshipPairCondition(userId, posts.userId);
