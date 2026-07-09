@@ -60,4 +60,12 @@ describe('GET /api/users/:handle', () => {
     const body = await res.json<{ error: string }>();
     expect(body).toMatchObject({ error: 'User not found' });
   });
+
+  it('DB エラー時は 500 を返す', async () => {
+    selectWhereMock = mock(() => Promise.reject(new Error('db error')));
+    const res = await getProfile('alice');
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body).toEqual({ error: 'Internal server error' });
+  });
 });
