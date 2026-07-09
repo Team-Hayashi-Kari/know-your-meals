@@ -36,6 +36,13 @@
       "when": 1783528565246,
       "tag": "0004_bouncy_monster_badoon",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783569068502,
+      "tag": "0005_dapper_jamie_braddock",
+      "breakpoints": true
     }
   ]
 }

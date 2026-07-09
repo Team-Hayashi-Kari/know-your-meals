@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test';
-import type { Env } from '../src/types';
+import { BINDINGS } from './helpers';
 
 // `getSession` の戻り値を各テストで切り替える
 let mockSessionValue: unknown = { user: { id: 'user1', name: 'Test User', email: 'test@example.com' } };
@@ -36,15 +36,6 @@ const actualDb = await import('@repo/db');
 mock.module('@repo/db', () => ({ ...actualDb, createDb: () => mockDb }));
 
 const { default: app } = await import('../src/index');
-
-const BINDINGS: Env['Bindings'] = {
-  DATABASE_URL: 'postgres://test',
-  BETTER_AUTH_SECRET: 'test-secret',
-  BETTER_AUTH_URL: 'http://localhost:8787',
-  GOOGLE_CLIENT_ID: 'test-client-id',
-  GOOGLE_CLIENT_SECRET: 'test-client-secret',
-  GOOGLE_PLACES_API_KEY: 'test-api-key',
-};
 
 const CURRENT_USER_ID = 'user1';
 const TARGET_USER = { id: 'user2', name: 'Target User', email: 'target@example.com', handle: 'target-handle' };
