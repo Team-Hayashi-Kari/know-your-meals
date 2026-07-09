@@ -104,11 +104,11 @@ jobs:
       - name: Generate highlights with Claude
         id: highlights
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           COMMITS: ${{ steps.commits.outputs.log }}
         run: |
           RESPONSE=$(curl -sf https://api.anthropic.com/v1/messages \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "Authorization: Bearer $CLAUDE_CODE_OAUTH_TOKEN" \
             -H "anthropic-version: 2023-06-01" \
             -H "content-type: application/json" \
             -d "$(jq -n \
