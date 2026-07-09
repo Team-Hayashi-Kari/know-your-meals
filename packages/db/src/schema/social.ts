@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { index, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { check, index, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { user } from './auth';
 import { images, posts, shops } from './content';
 
@@ -48,6 +48,7 @@ export const friendships = pgTable(
     ),
     index('friendships_addressee_id_idx').on(table.addresseeId),
     index('friendships_requester_id_idx').on(table.requesterId),
+    check('friendships_no_self_check', sql`${table.requesterId} <> ${table.addresseeId}`),
   ],
 );
 
