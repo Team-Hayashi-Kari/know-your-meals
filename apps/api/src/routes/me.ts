@@ -197,8 +197,7 @@ export const me = new Hono<Env>()
   })
   .get('/friend-requests', requireAuth, async (c) => {
     const direction = c.req.query('direction');
-    if (direction !== 'received' && direction !== 'sent') return c.json({ error: 'Invalid direction' }, 400);
-    if (direction !== 'received') return c.json({ error: 'Invalid direction' }, 400);
+    if (!['received', 'sent'].includes(direction ?? '')) return c.json({ error: 'Invalid direction' }, 400);
 
     const authUser = c.get('user');
     const db = createDb(c.env.DATABASE_URL);
