@@ -1,4 +1,4 @@
-import { createDb, friendships, images, pinEmojiEnum, posts, shops } from '@repo/db';
+import { bookmarks, createDb, friendships, images, pinEmojiEnum, posts, shops } from '@repo/db';
 import { and, eq, or } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { postFriendshipCondition } from '../lib/visibility';
@@ -176,4 +176,20 @@ export const postsRoute = new Hono<Env>()
 
     const { imageKey, ...post } = row;
     return c.json({ ...post, imageUrl: imageKey ? `/api/images/${imageKey}` : null });
+  })
+  .delete('/:id/bookmark', requireAuth, async (c) => {
+    const authUser = c.get('user');
+    const postId = Number(c.req.param('id'));
+    if (!Number.isInteger(postId) || postId <= 0) return c.json({ error: 'Not found' }, 404);
+
+    const db = createDb(c.env.DATABASE_URL);
+
+    const [deleted] = await db
+      .delete(bookmarks)
+      .where(and(eq(bookmarks.userId, authUser.id), eq(bookmarks.postId, postId)))
+      .returning();
+
+    if (!deleted) return c.json({ error: 'Bookmark not found' }, 404);
+
+    return c.body(null, 204);
   });
