@@ -20,9 +20,14 @@ type ImageRow = { postId: number | null; postUserId: string | null } | undefined
 type FriendRow = { id: number } | undefined;
 
 let mockImageRow: ImageRow = { postId: 1, postUserId: 'user1' };
-let mockFriendRow: FriendRow = undefined;
+let mockFriendRow: FriendRow;
 let mockR2Object: { body: ReadableStream; httpMetadata?: { contentType?: string } } | null = {
-  body: new ReadableStream({ start: (c) => { c.enqueue(new Uint8Array([1, 2, 3])); c.close(); } }),
+  body: new ReadableStream({
+    start: (c) => {
+      c.enqueue(new Uint8Array([1, 2, 3]));
+      c.close();
+    },
+  }),
   httpMetadata: { contentType: 'image/jpeg' },
 };
 
@@ -68,7 +73,12 @@ describe('GET /api/images/:userId/:uuid', () => {
     mockImageRow = { postId: 1, postUserId: 'user1' };
     mockFriendRow = undefined;
     mockR2Object = {
-      body: new ReadableStream({ start: (c) => { c.enqueue(new Uint8Array([1, 2, 3])); c.close(); } }),
+      body: new ReadableStream({
+        start: (c) => {
+          c.enqueue(new Uint8Array([1, 2, 3]));
+          c.close();
+        },
+      }),
       httpMetadata: { contentType: 'image/jpeg' },
     };
     eqMock.mockClear();
@@ -145,7 +155,11 @@ describe('GET /api/images/:userId/:uuid', () => {
 
   it('不正な Content-Type は application/octet-stream にフォールバックする', async () => {
     mockR2Object = {
-      body: new ReadableStream({ start: (c) => { c.close(); } }),
+      body: new ReadableStream({
+        start: (c) => {
+          c.close();
+        },
+      }),
       httpMetadata: { contentType: 'text/html' },
     };
 
