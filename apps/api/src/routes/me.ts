@@ -194,6 +194,75 @@ export const me = new Hono<Env>()
       return c.json({ error: 'Internal server error' }, 500);
     }
   })
+  .get('/friend-requests', requireAuth, async (c) => {
+    const direction = c.req.query('direction');
+    if (direction !== 'received' && direction !== 'sent') return c.json({ error: 'Invalid direction' }, 400);
+
+    const authUser = c.get('user');
+    const db = createDb(c.env.DATABASE_URL);
+
+    try {
+      if (direction === 'received') {
+        const rows = await db
+          .select({
+            requester: {
+              id: requester.id,
+              handle: requester.handle,
+              name: requester.name,
+              image: requester.image,
+              bio: requester.bio,
+            },
+          })
+          .from(friendships)
+          .innerJoin(requester, eq(friendships.requesterId, requester.id))
+          .where(and(eq(friendships.status, 'pending'), eq(friendships.addresseeId, authUser.id)))
+          .orderBy(desc(friendships.createdAt));
+
+        return c.json(
+          rows.map(
+            (row) =>
+              ({
+                id: row.requester.id,
+                handle: row.requester.handle,
+                name: row.requester.name,
+                image: row.requester.image,
+                bio: row.requester.bio,
+              }) satisfies FriendUser,
+          ),
+        );
+      }
+
+      const rows = await db
+        .select({
+          addressee: {
+            id: addressee.id,
+            handle: addressee.handle,
+            name: addressee.name,
+            image: addressee.image,
+            bio: addressee.bio,
+          },
+        })
+        .from(friendships)
+        .innerJoin(addressee, eq(friendships.addresseeId, addressee.id))
+        .where(and(eq(friendships.status, 'pending'), eq(friendships.requesterId, authUser.id)))
+        .orderBy(desc(friendships.createdAt));
+
+      return c.json(
+        rows.map(
+          (row) =>
+            ({
+              id: row.addressee.id,
+              handle: row.addressee.handle,
+              name: row.addressee.name,
+              image: row.addressee.image,
+              bio: row.addressee.bio,
+            }) satisfies FriendUser,
+        ),
+      );
+    } catch {
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  })
   .get('/posts', requireAuth, async (c) => {
     const authUser = c.get('user');
     const db = createDb(c.env.DATABASE_URL);
