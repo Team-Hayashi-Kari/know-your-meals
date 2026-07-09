@@ -17,7 +17,7 @@ mock.module('drizzle-orm', () => ({ ...actualDrizzleOrm, eq: eqMock }));
 // visible post が存在するか（可視性判定の結果を表す）
 let mockVisiblePost: { id: number } | undefined = { id: 1 };
 // 既に bookmark が存在するか
-let mockExistingBookmark: { id: number } | undefined = undefined;
+let mockExistingBookmark: { id: number } | undefined;
 
 const postsWhereMock = mock(() => Promise.resolve(mockVisiblePost ? [mockVisiblePost] : []));
 const friendshipsLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ where: postsWhereMock }));
