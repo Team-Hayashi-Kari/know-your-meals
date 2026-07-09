@@ -133,7 +133,8 @@ export default function ProfileSetupScreen() {
 
       {/* 下部：次へボタン */}
       <Button
-        onPress={() => router.replace('/home')}
+        onPress={() => router.replace('/find-friends')}
+
         backgroundColor="#fff"
         pressStyle={{ backgroundColor: '#e8e8e8', scale: 0.97 }}
         borderRadius="$5"

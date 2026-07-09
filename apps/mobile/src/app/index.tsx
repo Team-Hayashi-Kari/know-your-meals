@@ -21,7 +21,7 @@ export default function LoginScreen() {
         // Web: サーバーにOAuth URLを取得してリダイレクト
         const { data, error } = await authClient.signIn.social({
           provider: 'google',
-          callbackURL: `${window.location.origin}/home`,
+          callbackURL: `${window.location.origin}/after-login`,
         });
         if (error) throw new Error(error.message ?? JSON.stringify(error));
         if (data?.url) window.location.href = data.url;
@@ -29,10 +29,10 @@ export default function LoginScreen() {
         // Native: expoClient が WebBrowser を自動で開いて OAuth を完結させる
         const { error } = await authClient.signIn.social({
           provider: 'google',
-          callbackURL: '/home', // expoClient が Linking.createURL('/home') に変換
+          callbackURL: '/after-login', // expoClient が Linking.createURL('/after-login') に変換
         });
         if (error) throw new Error(error.message ?? JSON.stringify(error));
-        router.replace('/home');
+        router.replace('/after-login');
       }
     } catch (e) {
       console.error('[Login error]', e);
