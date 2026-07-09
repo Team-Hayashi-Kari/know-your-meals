@@ -1,9 +1,23 @@
 import { bookmarks, createDb, friendships, images, posts, shops, user } from '@repo/db';
 import { and, desc, eq, or } from 'drizzle-orm';
+import { createDb, friendships, images, posts, shops, user } from '@repo/db';
+import { and, desc, eq, or } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { Hono } from 'hono';
 import { friendshipPairCondition } from '../lib/visibility';
 import { requireAuth } from '../middleware/auth';
 import type { Env } from '../types';
+
+const requester = alias(user, 'requester');
+const addressee = alias(user, 'addressee');
+
+type FriendUser = {
+  id: string;
+  handle: string | null;
+  name: string;
+  image: string | null;
+  bio: string | null;
+};
 
 export const me = new Hono<Env>()
   .get('/', requireAuth, async (c) => {
@@ -25,6 +39,53 @@ export const me = new Hono<Env>()
         .where(eq(user.id, authUser.id));
       if (!row) return c.json({ error: 'User not found' }, 404);
       return c.json(row);
+    } catch {
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  })
+  .get('/friends', requireAuth, async (c) => {
+    const authUser = c.get('user');
+    const db = createDb(c.env.DATABASE_URL);
+
+    try {
+      const rows = await db
+        .select({
+          requesterId: friendships.requesterId,
+          requester: {
+            id: requester.id,
+            handle: requester.handle,
+            name: requester.name,
+            image: requester.image,
+            bio: requester.bio,
+          },
+          addressee: {
+            id: addressee.id,
+            handle: addressee.handle,
+            name: addressee.name,
+            image: addressee.image,
+            bio: addressee.bio,
+          },
+        })
+        .from(friendships)
+        .innerJoin(requester, eq(friendships.requesterId, requester.id))
+        .innerJoin(addressee, eq(friendships.addresseeId, addressee.id))
+        .where(and(eq(friendships.status, 'accepted'), or(eq(friendships.requesterId, authUser.id), eq(friendships.addresseeId, authUser.id))))
+        .orderBy(desc(friendships.updatedAt), desc(friendships.createdAt));
+
+      const friends = rows
+        .map((row) => {
+          const friend = row.requesterId === authUser.id ? row.addressee : row.requester;
+          return {
+            id: friend.id,
+            handle: friend.handle,
+            name: friend.name,
+            image: friend.image,
+            bio: friend.bio,
+          } satisfies FriendUser;
+        })
+        .filter((friend) => friend.id !== authUser.id);
+
+      return c.json(friends);
     } catch {
       return c.json({ error: 'Internal server error' }, 500);
     }
