@@ -16,11 +16,9 @@ const andMock = mock((...args: unknown[]) => ({ type: 'and', args }));
 const orMock = mock((...args: unknown[]) => ({ type: 'or', args }));
 mock.module('drizzle-orm', () => ({ ...actualDrizzleOrm, eq: eqMock, and: andMock, or: orMock }));
 
-type ImageRow = { postId: number | null; postUserId: string | null } | undefined;
-type FriendRow = { id: number } | undefined;
+type ImageRow = { id: number } | undefined;
 
-let mockImageRow: ImageRow = { postId: 1, postUserId: 'user1' };
-let mockFriendRow: FriendRow;
+let mockImageRow: ImageRow = { id: 1 };
 let mockR2Object: { body: ReadableStream; httpMetadata?: { contentType?: string } } | null = {
   body: new ReadableStream({
     start: (c) => {
@@ -31,15 +29,16 @@ let mockR2Object: { body: ReadableStream; httpMetadata?: { contentType?: string 
   httpMetadata: { contentType: 'image/jpeg' },
 };
 
-const limitMock = mock(() => Promise.resolve(mockFriendRow ? [mockFriendRow] : []));
-const friendWhereMock = mock(() => ({ limit: limitMock }));
+// 単一クエリ (select().from(images).innerJoin(posts).leftJoin(friendships).where()) を模す。
+// visibility は SQL の where 側で判定される想定なので、mockImageRow の有無だけで「見える/見えない」を表現する。
+// innerJoin(posts) により孤立画像 (images.postId IS NULL) も row なしとして表現される。
 const imageWhereMock = mock(() => Promise.resolve(mockImageRow ? [mockImageRow] : []));
-const leftJoinMock = mock((_table: unknown, _condition: unknown) => ({ where: imageWhereMock }));
+const friendshipsLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ where: imageWhereMock }));
+const postsInnerJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: friendshipsLeftJoinMock }));
 
 const selectMock = mock((_fields: unknown) => ({
   from: mock((_table: unknown) => ({
-    leftJoin: leftJoinMock,
-    where: friendWhereMock,
+    innerJoin: postsInnerJoinMock,
   })),
 }));
 
@@ -47,18 +46,20 @@ const mockR2Bucket: R2Bucket = {
   get: mock(async (_key: string) => mockR2Object),
 } as unknown as R2Bucket;
 
+const friendshipsTable = {
+  id: 'friendships.id',
+  requesterId: 'friendships.requesterId',
+  addresseeId: 'friendships.addresseeId',
+  status: 'friendships.status',
+};
+
 const actualDb = await import('@repo/db');
 mock.module('@repo/db', () => ({
   ...actualDb,
   createDb: () => ({ select: selectMock }),
   images: { postId: 'images.postId', key: 'images.key' },
   posts: { id: 'posts.id', userId: 'posts.userId' },
-  friendships: {
-    id: 'friendships.id',
-    requesterId: 'friendships.requesterId',
-    addresseeId: 'friendships.addresseeId',
-    status: 'friendships.status',
-  },
+  friendships: friendshipsTable,
 }));
 
 const { default: app } = await import('../src/index');
@@ -70,8 +71,7 @@ function req(path: string, init?: RequestInit) {
 describe('GET /api/images/:userId/:uuid', () => {
   beforeEach(() => {
     mockSessionValue = { user: { id: 'user1', name: 'Test User', email: 'test@example.com' } };
-    mockImageRow = { postId: 1, postUserId: 'user1' };
-    mockFriendRow = undefined;
+    mockImageRow = { id: 1 };
     mockR2Object = {
       body: new ReadableStream({
         start: (c) => {
@@ -85,10 +85,9 @@ describe('GET /api/images/:userId/:uuid', () => {
     andMock.mockClear();
     orMock.mockClear();
     selectMock.mockClear();
-    leftJoinMock.mockClear();
+    postsInnerJoinMock.mockClear();
+    friendshipsLeftJoinMock.mockClear();
     imageWhereMock.mockClear();
-    friendWhereMock.mockClear();
-    limitMock.mockClear();
     (mockR2Bucket.get as ReturnType<typeof mock>).mockClear();
   });
 
@@ -109,8 +108,9 @@ describe('GET /api/images/:userId/:uuid', () => {
     expect(res.status).toBe(404);
   });
 
-  it('孤立画像（postUserId が null）は 404 を返す', async () => {
-    mockImageRow = { postId: null, postUserId: null };
+  it('孤立画像（images.postId が null）は 404 を返す', async () => {
+    // innerJoin(posts) により、対応する post を持たない画像は SQL レベルで row が返らない。
+    mockImageRow = undefined;
 
     const res = await req('/api/images/user1/orphan-uuid');
 
@@ -126,9 +126,9 @@ describe('GET /api/images/:userId/:uuid', () => {
   });
 
   it('フレンドの画像は 200 を返す', async () => {
+    // accepted friend の場合は SQL の where にマッチし row が返る想定。
     mockSessionValue = { user: { id: 'user2', name: 'Other User', email: 'other@example.com' } };
-    mockImageRow = { postId: 1, postUserId: 'user1' };
-    mockFriendRow = { id: 99 };
+    mockImageRow = { id: 1 };
 
     const res = await req('/api/images/user1/friend-uuid');
 
@@ -136,9 +136,9 @@ describe('GET /api/images/:userId/:uuid', () => {
   });
 
   it('フレンドでない他人の画像は 404 を返す', async () => {
+    // 非 friend の場合は SQL の where にマッチせず row が返らない想定。
     mockSessionValue = { user: { id: 'user3', name: 'Stranger', email: 'stranger@example.com' } };
-    mockImageRow = { postId: 1, postUserId: 'user1' };
-    mockFriendRow = undefined;
+    mockImageRow = undefined;
 
     const res = await req('/api/images/user1/other-uuid');
 
@@ -167,5 +167,21 @@ describe('GET /api/images/:userId/:uuid', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('application/octet-stream');
+  });
+
+  it('visibility判定に friendships の JOIN と accepted 判定が使われている（isFriend()削除の回帰防止）', async () => {
+    await req('/api/images/user1/my-uuid');
+
+    // leftJoin(friendships, postFriendshipCondition(authUser.id)) が実行されている
+    expect(friendshipsLeftJoinMock).toHaveBeenCalledTimes(1);
+    expect(friendshipsLeftJoinMock.mock.calls[0]?.[0]).toBe(friendshipsTable);
+
+    // postFriendshipCondition(authUser.id) が viewer=authUser.id で friendshipPairCondition を評価している
+    expect(eqMock).toHaveBeenCalledWith('friendships.requesterId', 'user1');
+    expect(eqMock).toHaveBeenCalledWith('friendships.addresseeId', 'user1');
+
+    // where句に本人条件と accepted friend 条件が含まれている
+    expect(eqMock).toHaveBeenCalledWith('posts.userId', 'user1');
+    expect(eqMock).toHaveBeenCalledWith('friendships.status', 'accepted');
   });
 });

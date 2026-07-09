@@ -1,8 +1,8 @@
-import { createDb, images, posts } from '@repo/db';
-import { eq } from 'drizzle-orm';
+import { createDb, friendships, images, posts } from '@repo/db';
+import { and, eq, or } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { createAuth } from '../lib/auth';
-import { isFriend } from '../lib/friendship';
+import { postFriendshipCondition } from '../lib/visibility';
 import type { Env } from '../types';
 
 export const imagesRoute = new Hono<Env>().get('/:userId/:uuid', async (c) => {
@@ -16,16 +16,13 @@ export const imagesRoute = new Hono<Env>().get('/:userId/:uuid', async (c) => {
   const db = createDb(c.env.DATABASE_URL);
 
   const [row] = await db
-    .select({ postId: images.postId, postUserId: posts.userId })
+    .select({ id: images.id })
     .from(images)
-    .leftJoin(posts, eq(images.postId, posts.id))
-    .where(eq(images.key, key));
+    .innerJoin(posts, eq(images.postId, posts.id))
+    .leftJoin(friendships, postFriendshipCondition(authUser.id))
+    .where(and(eq(images.key, key), or(eq(posts.userId, authUser.id), eq(friendships.status, 'accepted'))));
 
   if (!row) return c.json({ error: 'Image Not found' }, 404);
-
-  if (!row.postUserId || (authUser.id !== row.postUserId && !(await isFriend(db, authUser.id, row.postUserId)))) {
-    return c.json({ error: 'Image Not found' }, 404);
-  }
 
   const obj = await c.env.IMAGES_BUCKET.get(key);
   if (!obj) return c.json({ error: 'Image Not found' }, 404);
