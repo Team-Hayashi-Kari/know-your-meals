@@ -79,6 +79,7 @@ export const friendshipsRoute = new Hono<Env>()
   .patch('/:id', requireAuth, async (c) => {
     const currentUser = c.get('user');
     const id = Number(c.req.param('id'));
+    if (!Number.isInteger(id) || id <= 0) return c.json({ error: 'Invalid friendship id' }, 400);
     const body = await c.req.json<UpdateFriendshipBody>().catch(() => null);
     const status = body?.status;
 
