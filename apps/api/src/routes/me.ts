@@ -103,6 +103,16 @@ type FriendUser = {
   bio: string | null;
 };
 
+function toFriendUser(friend: FriendUser): FriendUser {
+  return {
+    id: friend.id,
+    handle: friend.handle,
+    name: friend.name,
+    image: friend.image,
+    bio: friend.bio,
+  };
+}
+
 export const me = new Hono<Env>()
   .get('/', requireAuth, async (c) => {
     const authUser = c.get('user');
@@ -197,39 +207,51 @@ export const me = new Hono<Env>()
   })
   .get('/friend-requests', requireAuth, async (c) => {
     const direction = c.req.query('direction');
-    if (direction !== 'received') return c.json({ error: 'Invalid direction' }, 400);
+    if (!['received', 'sent'].includes(direction ?? '')) return c.json({ error: 'Invalid direction' }, 400);
 
     const authUser = c.get('user');
     const db = createDb(c.env.DATABASE_URL);
 
     try {
-      const rows = await db
-        .select({
-          requester: {
-            id: requester.id,
-            handle: requester.handle,
-            name: requester.name,
-            image: requester.image,
-            bio: requester.bio,
-          },
-        })
-        .from(friendships)
-        .innerJoin(requester, eq(friendships.requesterId, requester.id))
-        .where(and(eq(friendships.status, 'pending'), eq(friendships.addresseeId, authUser.id)))
-        .orderBy(desc(friendships.createdAt));
+      let rows: FriendUser[] = [];
 
-      return c.json(
-        rows.map(
-          (row) =>
-            ({
-              id: row.requester.id,
-              handle: row.requester.handle,
-              name: row.requester.name,
-              image: row.requester.image,
-              bio: row.requester.bio,
-            }) satisfies FriendUser,
-        ),
-      );
+      if (direction === 'received') {
+        const receivedRows = await db
+          .select({
+            requester: {
+              id: requester.id,
+              handle: requester.handle,
+              name: requester.name,
+              image: requester.image,
+              bio: requester.bio,
+            },
+          })
+          .from(friendships)
+          .innerJoin(requester, eq(friendships.requesterId, requester.id))
+          .where(and(eq(friendships.status, 'pending'), eq(friendships.addresseeId, authUser.id)))
+          .orderBy(desc(friendships.createdAt));
+
+        rows = receivedRows.map((row) => toFriendUser(row.requester));
+      } else {
+        const sentRows = await db
+          .select({
+            addressee: {
+              id: addressee.id,
+              handle: addressee.handle,
+              name: addressee.name,
+              image: addressee.image,
+              bio: addressee.bio,
+            },
+          })
+          .from(friendships)
+          .innerJoin(addressee, eq(friendships.addresseeId, addressee.id))
+          .where(and(eq(friendships.status, 'pending'), eq(friendships.requesterId, authUser.id)))
+          .orderBy(desc(friendships.createdAt));
+
+        rows = sentRows.map((row) => toFriendUser(row.addressee));
+      }
+
+      return c.json(rows);
     } catch {
       return c.json({ error: 'Internal server error' }, 500);
     }
