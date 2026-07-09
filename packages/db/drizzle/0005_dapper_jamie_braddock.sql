@@ -1,0 +1,1 @@
+ALTER TABLE "friendships" ADD CONSTRAINT "friendships_no_self_check" CHECK ("friendships"."requester_id" <> "friendships"."addressee_id");
