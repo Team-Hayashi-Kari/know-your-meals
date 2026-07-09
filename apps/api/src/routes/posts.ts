@@ -1,5 +1,7 @@
-import { createDb, images, pinEmojiEnum, posts, shops } from '@repo/db';
+import { createDb, friendships, images, pinEmojiEnum, posts, shops } from '@repo/db';
+import { and, eq, or } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { postFriendshipCondition } from '../lib/visibility';
 import { requireAuth } from '../middleware/auth';
 import type { Env } from '../types';
 
@@ -34,107 +36,144 @@ type ShopInput = {
   lng: number;
 };
 
-export const postsRoute = new Hono<Env>().post('/', requireAuth, async (c) => {
-  const user = c.get('user');
-  const body = await c.req.parseBody();
+export const postsRoute = new Hono<Env>()
+  .post('/', requireAuth, async (c) => {
+    const user = c.get('user');
+    const body = await c.req.parseBody();
 
-  const shopRaw = body.shop;
-  const comment = typeof body.comment === 'string' ? body.comment : undefined;
-  const pin = body.pin;
-  const imageFile = body.image;
+    const shopRaw = body.shop;
+    const comment = typeof body.comment === 'string' ? body.comment : undefined;
+    const pin = body.pin;
+    const imageFile = body.image;
 
-  if (!shopRaw || typeof shopRaw !== 'string') {
-    return c.json({ error: 'shop is required' }, 400);
-  }
-  if (!pin || typeof pin !== 'string' || !(PIN_EMOJIS as readonly string[]).includes(pin)) {
-    return c.json({ error: `pin must be one of: ${PIN_EMOJIS.join(' ')}` }, 400);
-  }
-  if (!imageFile || !(imageFile instanceof File)) {
-    return c.json({ error: 'image is required' }, 400);
-  }
+    if (!shopRaw || typeof shopRaw !== 'string') {
+      return c.json({ error: 'shop is required' }, 400);
+    }
+    if (!pin || typeof pin !== 'string' || !(PIN_EMOJIS as readonly string[]).includes(pin)) {
+      return c.json({ error: `pin must be one of: ${PIN_EMOJIS.join(' ')}` }, 400);
+    }
+    if (!imageFile || !(imageFile instanceof File)) {
+      return c.json({ error: 'image is required' }, 400);
+    }
 
-  let shop: ShopInput;
-  try {
-    shop = JSON.parse(shopRaw) as ShopInput;
-    if (!shop.googlePlaceId || !shop.name || !Number.isFinite(shop.lat) || !Number.isFinite(shop.lng)) throw new Error();
-  } catch {
-    return c.json({ error: 'shop must be valid JSON with googlePlaceId, name, lat, lng' }, 400);
-  }
+    let shop: ShopInput;
+    try {
+      shop = JSON.parse(shopRaw) as ShopInput;
+      if (!shop.googlePlaceId || !shop.name || !Number.isFinite(shop.lat) || !Number.isFinite(shop.lng)) throw new Error();
+    } catch {
+      return c.json({ error: 'shop must be valid JSON with googlePlaceId, name, lat, lng' }, 400);
+    }
 
-  if (imageFile.size > MAX_IMAGE_BYTES) {
-    return c.json({ error: 'Image exceeds 10MB limit' }, 413);
-  }
+    if (imageFile.size > MAX_IMAGE_BYTES) {
+      return c.json({ error: 'Image exceeds 10MB limit' }, 413);
+    }
 
-  const db = createDb(c.env.DATABASE_URL);
+    const db = createDb(c.env.DATABASE_URL);
 
-  const upsertedShops = await db
-    .insert(shops)
-    .values({
-      googlePlaceId: shop.googlePlaceId,
-      name: shop.name,
-      address: shop.address ?? null,
-      lat: shop.lat,
-      lng: shop.lng,
-    })
-    .onConflictDoUpdate({
-      target: shops.googlePlaceId,
-      set: { name: shop.name, address: shop.address ?? null, lat: shop.lat, lng: shop.lng },
-    })
-    .returning();
-  const upsertedShop = upsertedShops[0];
-  if (!upsertedShop) return c.json({ error: 'Failed to upsert shop' }, 500);
-
-  const key = `${user.id}/${crypto.randomUUID()}`;
-  const arrayBuffer = await imageFile.arrayBuffer();
-  const contentType = sniffMime(new Uint8Array(arrayBuffer));
-  if (!contentType) return c.json({ error: 'Unsupported image format. Use JPEG, PNG, or WebP.' }, 400);
-  await c.env.IMAGES_BUCKET.put(key, arrayBuffer, {
-    httpMetadata: { contentType },
-  });
-
-  let post: typeof posts.$inferSelect;
-  let image: typeof images.$inferSelect;
-  try {
-    const createdPosts = await db
-      .insert(posts)
+    const upsertedShops = await db
+      .insert(shops)
       .values({
-        userId: user.id,
-        shopId: upsertedShop.id,
-        comment: comment ?? null,
-        pin: pin as (typeof PIN_EMOJIS)[number],
+        googlePlaceId: shop.googlePlaceId,
+        name: shop.name,
+        address: shop.address ?? null,
+        lat: shop.lat,
+        lng: shop.lng,
+      })
+      .onConflictDoUpdate({
+        target: shops.googlePlaceId,
+        set: { name: shop.name, address: shop.address ?? null, lat: shop.lat, lng: shop.lng },
       })
       .returning();
-    if (!createdPosts[0]) throw new Error('Failed to create post');
-    post = createdPosts[0];
+    const upsertedShop = upsertedShops[0];
+    if (!upsertedShop) return c.json({ error: 'Failed to upsert shop' }, 500);
 
-    const createdImages = await db.insert(images).values({ postId: post.id, key }).returning();
-    if (!createdImages[0]) throw new Error('Failed to create image record');
-    image = createdImages[0];
-  } catch {
-    await c.env.IMAGES_BUCKET.delete(key);
-    return c.json({ error: 'Failed to save post' }, 500);
-  }
+    const key = `${user.id}/${crypto.randomUUID()}`;
+    const arrayBuffer = await imageFile.arrayBuffer();
+    const contentType = sniffMime(new Uint8Array(arrayBuffer));
+    if (!contentType) return c.json({ error: 'Unsupported image format. Use JPEG, PNG, or WebP.' }, 400);
+    await c.env.IMAGES_BUCKET.put(key, arrayBuffer, {
+      httpMetadata: { contentType },
+    });
 
-  const imageUrl = `${c.env.IMAGES_BASE_URL}/${key}`;
+    let post: typeof posts.$inferSelect;
+    let image: typeof images.$inferSelect;
+    try {
+      const createdPosts = await db
+        .insert(posts)
+        .values({
+          userId: user.id,
+          shopId: upsertedShop.id,
+          comment: comment ?? null,
+          pin: pin as (typeof PIN_EMOJIS)[number],
+        })
+        .returning();
+      if (!createdPosts[0]) throw new Error('Failed to create post');
+      post = createdPosts[0];
 
-  return c.json({
-    post: {
-      id: post.id,
-      comment: post.comment,
-      pin: post.pin,
-      createdAt: post.createdAt,
-      shop: {
-        id: upsertedShop.id,
-        googlePlaceId: upsertedShop.googlePlaceId,
-        name: upsertedShop.name,
-        address: upsertedShop.address,
-        lat: upsertedShop.lat,
-        lng: upsertedShop.lng,
+      const createdImages = await db.insert(images).values({ postId: post.id, key }).returning();
+      if (!createdImages[0]) throw new Error('Failed to create image record');
+      image = createdImages[0];
+    } catch {
+      await c.env.IMAGES_BUCKET.delete(key);
+      return c.json({ error: 'Failed to save post' }, 500);
+    }
+
+    const imageUrl = `${c.env.IMAGES_BASE_URL}/${key}`;
+
+    return c.json({
+      post: {
+        id: post.id,
+        comment: post.comment,
+        pin: post.pin,
+        createdAt: post.createdAt,
+        shop: {
+          id: upsertedShop.id,
+          googlePlaceId: upsertedShop.googlePlaceId,
+          name: upsertedShop.name,
+          address: upsertedShop.address,
+          lat: upsertedShop.lat,
+          lng: upsertedShop.lng,
+        },
+        image: {
+          id: image.id,
+          url: imageUrl,
+        },
       },
-      image: {
-        id: image.id,
-        url: imageUrl,
-      },
-    },
+    });
+  })
+  .get('/:id', requireAuth, async (c) => {
+    const authUser = c.get('user');
+    const rawId = Number(c.req.param('id'));
+    if (!Number.isInteger(rawId) || rawId <= 0) return c.json({ error: 'Invalid post id' }, 400);
+
+    const db = createDb(c.env.DATABASE_URL);
+
+    const [row] = await db
+      .select({
+        id: posts.id,
+        userId: posts.userId,
+        comment: posts.comment,
+        pin: posts.pin,
+        createdAt: posts.createdAt,
+        updatedAt: posts.updatedAt,
+        imageKey: images.key,
+        shop: {
+          id: shops.id,
+          googlePlaceId: shops.googlePlaceId,
+          name: shops.name,
+          address: shops.address,
+          lat: shops.lat,
+          lng: shops.lng,
+        },
+      })
+      .from(posts)
+      .innerJoin(shops, eq(posts.shopId, shops.id))
+      .leftJoin(images, eq(images.postId, posts.id))
+      .leftJoin(friendships, postFriendshipCondition(authUser.id))
+      .where(and(eq(posts.id, rawId), or(eq(posts.userId, authUser.id), eq(friendships.status, 'accepted'))));
+
+    if (!row) return c.json({ error: 'Not found' }, 404);
+
+    const { imageKey, ...post } = row;
+    return c.json({ ...post, imageUrl: imageKey ? `/api/images/${imageKey}` : null });
   });
-});
