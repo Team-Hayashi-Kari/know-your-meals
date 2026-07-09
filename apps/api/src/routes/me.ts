@@ -2,7 +2,7 @@ import { bookmarks, createDb, friendships, images, posts, shops, user } from '@r
 import { and, desc, eq, ne, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { Hono } from 'hono';
-import { friendshipPairCondition } from '../lib/visibility';
+import { postFriendshipCondition } from '../lib/visibility';
 import { requireAuth } from '../middleware/auth';
 import type { Env } from '../types';
 
@@ -325,7 +325,7 @@ export const me = new Hono<Env>()
         .innerJoin(shops, eq(posts.shopId, shops.id))
         .leftJoin(images, eq(images.postId, posts.id))
         .innerJoin(user, eq(posts.userId, user.id))
-        .leftJoin(friendships, friendshipPairCondition(authUser.id))
+        .leftJoin(friendships, postFriendshipCondition(authUser.id))
         .where(and(eq(bookmarks.userId, authUser.id), or(eq(posts.userId, authUser.id), eq(friendships.status, 'accepted'))))
         .orderBy(desc(bookmarks.createdAt));
 

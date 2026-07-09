@@ -1,7 +1,7 @@
-import { createDb, images, pinEmojiEnum, posts, shops } from '@repo/db';
-import { eq } from 'drizzle-orm';
+import { createDb, friendships, images, pinEmojiEnum, posts, shops } from '@repo/db';
+import { and, eq, or } from 'drizzle-orm';
 import { Hono } from 'hono';
-import { isFriend } from '../lib/friendship';
+import { postFriendshipCondition } from '../lib/visibility';
 import { requireAuth } from '../middleware/auth';
 import type { Env } from '../types';
 
@@ -169,13 +169,10 @@ export const postsRoute = new Hono<Env>()
       .from(posts)
       .innerJoin(shops, eq(posts.shopId, shops.id))
       .leftJoin(images, eq(images.postId, posts.id))
-      .where(eq(posts.id, rawId));
+      .leftJoin(friendships, postFriendshipCondition(authUser.id))
+      .where(and(eq(posts.id, rawId), or(eq(posts.userId, authUser.id), eq(friendships.status, 'accepted'))));
 
     if (!row) return c.json({ error: 'Not found' }, 404);
-
-    if (row.userId !== authUser.id && !(await isFriend(db, authUser.id, row.userId))) {
-      return c.json({ error: 'Not found' }, 404);
-    }
 
     const { imageKey, ...post } = row;
     return c.json({ ...post, imageUrl: imageKey ? `/api/images/${imageKey}` : null });
