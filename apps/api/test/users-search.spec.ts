@@ -10,7 +10,8 @@ mock.module('../src/lib/auth', () => ({
   }),
 }));
 
-let selectFromWhereMock = mock(() => Promise.resolve([]));
+type MockRow = { total: number } | { id: string; name: string; handle: string; image: null };
+let selectFromWhereMock = mock(() => Promise.resolve([] as MockRow[]));
 
 const mockDb = {
   select: (_fields?: unknown) => ({
@@ -43,7 +44,7 @@ function search(params: Record<string, string>) {
 describe('GET /api/users/search', () => {
   beforeEach(() => {
     mockSessionValue = { user: CURRENT_USER };
-    selectFromWhereMock = mock(() => Promise.resolve([]));
+    selectFromWhereMock = mock(() => Promise.resolve([] as MockRow[]));
   });
 
   it('未認証で叩くと 401 を返す', async () => {
@@ -92,11 +93,7 @@ describe('GET /api/users/search', () => {
 
   it('ヒットしたユーザーを返し、最終ページなら nextPage が null', async () => {
     // count → [5件], select → [USER_A, USER_B]
-    selectFromWhereMock = mock(() =>
-      Promise.resolve(
-        selectFromWhereMock.mock.calls.length === 1 ? [{ total: 2 }] : [USER_A, USER_B],
-      ),
-    );
+    selectFromWhereMock = mock(() => Promise.resolve(selectFromWhereMock.mock.calls.length === 1 ? [{ total: 2 }] : [USER_A, USER_B]));
 
     const res = await search({ q: 'alice' });
     expect(res.status).toBe(200);
