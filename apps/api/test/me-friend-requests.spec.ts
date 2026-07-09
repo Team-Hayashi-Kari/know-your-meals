@@ -84,6 +84,8 @@ const actualDb = await import('@repo/db');
 mock.module('@repo/db', () => {
   return {
     ...actualDb,
+mock.module('@repo/db', () => {
+  return {
     createDb: () => ({
       select: () => ({
         from: () => ({
@@ -279,5 +281,78 @@ describe('GET /api/me/friend-requests', () => {
       const body = await res.json();
       expect(body).toEqual({ error: 'Internal server error' });
     });
+  it('direction=sent は Issue #58 では未対応のため 400 を返す', async () => {
+    const res = await req('/api/me/friend-requests?direction=sent');
+    expect(res.status).toBe(400);
+
+    const body = await res.json();
+    expect(body).toEqual({ error: 'Invalid direction' });
+  });
+
+  it('pending の受信申請がない場合 200 [] を返す', async () => {
+    const res = await req('/api/me/friend-requests?direction=received');
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body).toEqual([]);
+  });
+
+  it('pending の受信申請を requester 側のユーザーで返す', async () => {
+    mockSelectResult = [REQUEST_FROM_USER2, REQUEST_FROM_USER3];
+
+    const res = await req('/api/me/friend-requests?direction=received');
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual([
+      {
+        id: 'user2',
+        handle: 'friend-a',
+        name: 'Friend A',
+        image: 'https://example.com/friend-a.png',
+        bio: 'ramen',
+      },
+      {
+        id: 'user3',
+        handle: 'friend-b',
+        name: 'Friend B',
+        image: null,
+        bio: 'sushi',
+      },
+    ]);
+  });
+
+  it('レスポンスに email を含めない', async () => {
+    mockSelectResult = [REQUEST_FROM_USER2];
+
+    const res = await req('/api/me/friend-requests?direction=received');
+    const body = (await res.json()) as Record<string, unknown>[];
+
+    expect(res.status).toBe(200);
+    expect(body[0]).not.toHaveProperty('email');
+  });
+
+  it('status = pending の条件で DB 問い合わせする', async () => {
+    const res = await req('/api/me/friend-requests?direction=received');
+
+    expect(res.status).toBe(200);
+    expect(eqMock).toHaveBeenCalledWith(friendshipColumns.status, 'pending');
+  });
+
+  it('addresseeId = 自分 の条件で DB 問い合わせする', async () => {
+    const res = await req('/api/me/friend-requests?direction=received');
+
+    expect(res.status).toBe(200);
+    expect(eqMock).toHaveBeenCalledWith(friendshipColumns.addresseeId, 'user1');
+  });
+
+  it('DB 問い合わせに失敗した場合 500 を返す', async () => {
+    mockSelectError = new Error('db error');
+
+    const res = await req('/api/me/friend-requests?direction=received');
+    expect(res.status).toBe(500);
+
+    const body = await res.json();
+    expect(body).toEqual({ error: 'Internal server error' });
   });
 });

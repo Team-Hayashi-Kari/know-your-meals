@@ -10,38 +10,73 @@ permissions:
   contents: write
 
 jobs:
-  deploy:
+  build-api:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Build API
+        run: bunx wrangler deploy --dry-run
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Build Web
+        run: bunx expo export --platform web
+        working-directory: apps/mobile
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/mobile/dist
 
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
       - name: Run database migrations
         run: bun run db:migrate
         working-directory: packages/db
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
+  deploy-api:
+    needs: [build-api, migrate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
       - name: Deploy API to Cloudflare Workers
         run: bunx wrangler deploy
         working-directory: apps/api
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-      - name: Build Web
-        run: bunx expo export --platform web
-        working-directory: apps/mobile
-
+  deploy-web:
+    needs: [build-web, deploy-api]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: apps/mobile/dist
       - name: Deploy Web to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
@@ -50,6 +85,78 @@ jobs:
           projectName: know-your-meals
           directory: apps/mobile/dist
 
+  generate-highlights:
+    runs-on: ubuntu-latest
+    outputs:
+      text: ${{ steps.highlights.outputs.text }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get commits since last tag
+        id: commits
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          LOG=$(git log --oneline "${PREV_TAG}..HEAD" --no-merges)
+          echo "log<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$LOG" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+      - name: Generate highlights with Claude
+        id: highlights
+        continue-on-error: true
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          COMMITS: ${{ steps.commits.outputs.log }}
+        run: |
+          set +e
+          RESPONSE=$(curl -sf https://api.anthropic.com/v1/messages \
+            -H "Authorization: Bearer $CLAUDE_CODE_OAUTH_TOKEN" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d "$(jq -n \
+              --arg commits "$COMMITS" \
+              '{
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 500,
+                messages: [{
+                  role: "user",
+                  content: ("以下のコミット一覧から、エンドユーザー向けのリリースハイライトを日本語で3〜5点、箇条書き（- ではじめる）で生成してください。技術的な詳細よりも機能や改善点をわかりやすく。\n\n" + $commits)
+                }]
+              }'
+            )")
+          CURL_STATUS=$?
+          HIGHLIGHTS=""
+          if [ "$CURL_STATUS" -eq 0 ]; then
+            HIGHLIGHTS=$(echo "$RESPONSE" | jq -r '.content[0].text // empty' 2>/dev/null)
+          fi
+          echo "text<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$HIGHLIGHTS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          exit 0
+
+  release:
+    needs: [deploy-web, generate-highlights]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect release type
+        id: release_type
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "$REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "make_latest=true" >> "$GITHUB_OUTPUT"
+            echo "status_label=stable" >> "$GITHUB_OUTPUT"
+            echo "status_color=4fc08d" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "make_latest=false" >> "$GITHUB_OUTPUT"
+            echo "status_label=pre--release" >> "$GITHUB_OUTPUT"
+            echo "status_color=orange" >> "$GITHUB_OUTPUT"
+          fi
       - name: Escape version for shields.io
         id: version
         env:
@@ -57,26 +164,35 @@ jobs:
         run: |
           escaped="${REF_NAME//-/--}"
           echo "escaped=$escaped" >> "$GITHUB_OUTPUT"
-
+      - name: Build highlights section
+        id: highlights_section
+        env:
+          HIGHLIGHTS: ${{ needs.generate-highlights.outputs.text }}
+        run: |
+          SECTION=""
+          if [ -n "$HIGHLIGHTS" ]; then
+            SECTION=$'## ✨ このリリースのハイライト\n\n'"$HIGHLIGHTS"$'\n\n---\n'
+          fi
+          echo "section<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$SECTION" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          prerelease: ${{ steps.release_type.outputs.prerelease }}
+          make_latest: ${{ steps.release_type.outputs.make_latest }}
           body: |
             <div align="center">
 
             # 🍚 Know Your Meals — ${{ github.ref_name }}
 
             ![Version](https://img.shields.io/badge/version-${{ steps.version.outputs.escaped }}-ff6b6b?style=for-the-badge&logo=github)
-            ![Status](https://img.shields.io/badge/status-pre--release-orange?style=for-the-badge)
+            ![Status](https://img.shields.io/badge/status-${{ steps.release_type.outputs.status_label }}-${{ steps.release_type.outputs.status_color }}?style=for-the-badge)
             ![Bun](https://img.shields.io/badge/runtime-Bun-fbf0df?style=for-the-badge&logo=bun)
 
             </div>
 
             ---
 
-            ## ✨ このリリースのハイライト
-
-            > *(リリース後にここを編集してください)*
-
-            ---
+            ${{ steps.highlights_section.outputs.section }}
