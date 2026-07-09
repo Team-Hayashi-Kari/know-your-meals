@@ -103,6 +103,16 @@ type FriendUser = {
   bio: string | null;
 };
 
+function toFriendUser(friend: FriendUser): FriendUser {
+  return {
+    id: friend.id,
+    handle: friend.handle,
+    name: friend.name,
+    image: friend.image,
+    bio: friend.bio,
+  };
+}
+
 export const me = new Hono<Env>()
   .get('/', requireAuth, async (c) => {
     const authUser = c.get('user');
@@ -221,16 +231,7 @@ export const me = new Hono<Env>()
           .where(and(eq(friendships.status, 'pending'), eq(friendships.addresseeId, authUser.id)))
           .orderBy(desc(friendships.createdAt));
 
-        rows = receivedRows.map(
-          (row) =>
-            ({
-              id: row.requester.id,
-              handle: row.requester.handle,
-              name: row.requester.name,
-              image: row.requester.image,
-              bio: row.requester.bio,
-            }) satisfies FriendUser,
-        );
+        rows = receivedRows.map((row) => toFriendUser(row.requester));
       } else {
         const sentRows = await db
           .select({
@@ -247,16 +248,7 @@ export const me = new Hono<Env>()
           .where(and(eq(friendships.status, 'pending'), eq(friendships.requesterId, authUser.id)))
           .orderBy(desc(friendships.createdAt));
 
-        rows = sentRows.map(
-          (row) =>
-            ({
-              id: row.addressee.id,
-              handle: row.addressee.handle,
-              name: row.addressee.name,
-              image: row.addressee.image,
-              bio: row.addressee.bio,
-            }) satisfies FriendUser,
-        );
+        rows = sentRows.map((row) => toFriendUser(row.addressee));
       }
 
       return c.json(rows);
