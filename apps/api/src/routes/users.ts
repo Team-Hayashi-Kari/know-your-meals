@@ -33,7 +33,7 @@ export const usersRoute = new Hono<Env>()
     }
 
     const db = createDb(c.env.DATABASE_URL);
-    const escaped = query.replace(/%/g, '\\%').replace(/_/g, '\\_');
+    const escaped = query.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
     const pattern = `%${escaped}%`;
     const searchCondition = isHandleOnly ? ilike(user.handle, pattern) : or(ilike(user.name, pattern), ilike(user.handle, pattern));
     const where = and(searchCondition, ne(user.id, currentUser.id));
