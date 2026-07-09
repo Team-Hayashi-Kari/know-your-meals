@@ -84,6 +84,7 @@ export type NearbyPost = {
   isFriendPost: boolean;
   postedAt: string; // ISO8601。本物のAPI（GET /api/posts/:id）では posts.createdAt 相当
   distanceMeters: number; // 現在地からの距離。本物は現在地×店舗座標から算出するためプレースホルダー（[[post-detail-distance-needs-task1-coordination]]参照）
+  isBookmarked: boolean; // 本物のAPI（GET /api/posts/:id、PR #111）では bookmarks への LEFT JOIN で判定
 };
 
 const mockNearbyPosts: NearbyPost[] = [
@@ -99,6 +100,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: true,
     postedAt: '2026-07-09T22:20:00+09:00',
     distanceMeters: 320,
+    isBookmarked: false,
   },
   {
     id: 'p2',
@@ -112,6 +114,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: false,
     postedAt: '2026-07-09T19:05:00+09:00',
     distanceMeters: 540,
+    isBookmarked: false,
   },
   {
     id: 'p3',
@@ -125,6 +128,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: false,
     postedAt: '2026-07-09T21:40:00+09:00',
     distanceMeters: 810,
+    isBookmarked: false,
   },
   {
     id: 'p4',
@@ -138,6 +142,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: false,
     postedAt: '2026-07-09T18:15:00+09:00',
     distanceMeters: 150,
+    isBookmarked: false,
   },
   {
     id: 'p5',
@@ -151,6 +156,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: true,
     postedAt: '2026-07-09T12:30:00+09:00',
     distanceMeters: 970,
+    isBookmarked: false,
   },
   {
     id: 'p6',
@@ -164,6 +170,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: false,
     postedAt: '2026-07-08T19:50:00+09:00',
     distanceMeters: 1200,
+    isBookmarked: false,
   },
   {
     id: 'p7',
@@ -177,6 +184,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: false,
     postedAt: '2026-07-08T20:10:00+09:00',
     distanceMeters: 430,
+    isBookmarked: false,
   },
   {
     id: 'p8',
@@ -190,6 +198,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: false,
     postedAt: '2026-07-07T15:00:00+09:00',
     distanceMeters: 260,
+    isBookmarked: false,
   },
   {
     id: 'p9',
@@ -203,6 +212,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: false,
     postedAt: '2026-07-06T22:30:00+09:00',
     distanceMeters: 690,
+    isBookmarked: false,
   },
   {
     id: 'p10',
@@ -216,10 +226,9 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: false,
     postedAt: '2026-07-06T13:45:00+09:00',
     distanceMeters: 1050,
+    isBookmarked: false,
   },
 ];
-
-const mockBookmarkedPostIds = new Set<string>();
 
 // GET /api/map/posts?bbox= 相当
 export async function getNearbyPosts(lat: number, lng: number): Promise<NearbyPost[]> {
@@ -252,6 +261,7 @@ export async function createPost(draft: { storeId: string; comment: string; pin:
     isFriendPost: false,
     postedAt: new Date().toISOString(),
     distanceMeters: 0,
+    isBookmarked: false,
   };
   mockNearbyPosts.unshift(newPost);
   return newPost;
@@ -260,9 +270,6 @@ export async function createPost(draft: { storeId: string; comment: string; pin:
 // POST/DELETE /api/posts/:id/bookmark 相当
 export async function toggleBookmark(postId: string): Promise<void> {
   await delay(200);
-  if (mockBookmarkedPostIds.has(postId)) {
-    mockBookmarkedPostIds.delete(postId);
-  } else {
-    mockBookmarkedPostIds.add(postId);
-  }
+  const post = mockNearbyPosts.find((p) => p.id === postId);
+  if (post) post.isBookmarked = !post.isBookmarked;
 }
