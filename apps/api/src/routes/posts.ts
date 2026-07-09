@@ -1,4 +1,4 @@
-import { createDb, friendships, images, pinEmojiEnum, posts, shops } from '@repo/db';
+import { bookmarks, createDb, friendships, images, pinEmojiEnum, posts, shops } from '@repo/db';
 import { and, eq, or } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { postFriendshipCondition } from '../lib/visibility';
@@ -16,6 +16,15 @@ const MAGIC: Array<{ bytes: number[]; mime: string }> = [
 
 const WEBP_RIFF = [0x52, 0x49, 0x46, 0x46]; // "RIFF"
 const WEBP_MARK = [0x57, 0x45, 0x42, 0x50]; // "WEBP" at offset 8
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    ('code' in error || 'cause' in error) &&
+    ((error as { code?: unknown }).code === '23505' || (error as { cause?: { code?: unknown } }).cause?.code === '23505')
+  );
+}
 
 const sniffMime = (buf: Uint8Array): string | null => {
   for (const { bytes, mime } of MAGIC) {
@@ -176,4 +185,36 @@ export const postsRoute = new Hono<Env>()
 
     const { imageKey, ...post } = row;
     return c.json({ ...post, imageUrl: imageKey ? `/api/images/${imageKey}` : null });
+  })
+  .post('/:id/bookmark', requireAuth, async (c) => {
+    const authUser = c.get('user');
+    const rawId = Number(c.req.param('id'));
+    if (!Number.isInteger(rawId) || rawId <= 0) return c.json({ error: 'Invalid post id' }, 400);
+
+    const db = createDb(c.env.DATABASE_URL);
+
+    const [visiblePost] = await db
+      .select({ id: posts.id })
+      .from(posts)
+      .leftJoin(friendships, postFriendshipCondition(authUser.id))
+      .where(and(eq(posts.id, rawId), or(eq(posts.userId, authUser.id), eq(friendships.status, 'accepted'))));
+
+    if (!visiblePost) return c.json({ error: 'Not found' }, 404);
+
+    const [existing] = await db
+      .select({ id: bookmarks.id })
+      .from(bookmarks)
+      .where(and(eq(bookmarks.userId, authUser.id), eq(bookmarks.postId, rawId)));
+
+    if (existing) return c.json({ error: 'Already bookmarked' }, 409);
+
+    try {
+      await db.insert(bookmarks).values({ userId: authUser.id, postId: rawId });
+    } catch (err) {
+      // 同時リクエストによる unique 制約違反(23505)は競合として 409 に変換する
+      if (isUniqueConstraintError(err)) return c.json({ error: 'Already bookmarked' }, 409);
+      throw err;
+    }
+
+    return c.json({ bookmarked: true }, 201);
   });
