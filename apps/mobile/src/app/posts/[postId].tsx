@@ -4,17 +4,32 @@ import { ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
 import { Avatar } from '../../components/post-flow/Avatar';
 import { MiniHeader } from '../../components/post-flow/MiniHeader';
 import { PhotoSlot } from '../../components/post-flow/PhotoSlot';
-import { getPostById, type NearbyPost } from '../../lib/mock-api';
+import { PrimaryButton } from '../../components/post-flow/PrimaryButton';
+import { SecondaryButton } from '../../components/post-flow/SecondaryButton';
+import { getPostById, toggleBookmark, type NearbyPost } from '../../lib/mock-api';
 
 export default function PostDetailScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
   const router = useRouter();
   const [post, setPost] = useState<NearbyPost | null | undefined>(undefined);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!postId) return;
-    getPostById(postId).then((result) => setPost(result ?? null));
+    getPostById(postId).then((result) => {
+      setPost(result ?? null);
+      if (result) setIsBookmarked(result.isBookmarked);
+    });
   }, [postId]);
+
+  const handleToggleBookmark = async () => {
+    if (!post) return;
+    setSaving(true);
+    await toggleBookmark(post.id);
+    setIsBookmarked((prev) => !prev);
+    setSaving(false);
+  };
 
   if (post === undefined) {
     return (
@@ -41,7 +56,7 @@ export default function PostDetailScreen() {
     <YStack flex={1} backgroundColor="#000">
       <MiniHeader onBack={() => router.back()} />
 
-      <ScrollView flex={1} contentContainerStyle={{ paddingBottom: 48 }}>
+      <ScrollView flex={1} contentContainerStyle={{ paddingBottom: 140 }}>
         {/* ヒーロー写真 */}
         <YStack paddingHorizontal="$5" marginBottom="$4">
           <PhotoSlot uri={post.imageUri} height={280} borderRadius={16} label="写真なし" />
@@ -80,6 +95,15 @@ export default function PostDetailScreen() {
           </Text>
         </YStack>
       </ScrollView>
+
+      {/* 保存する（トグル：未保存はアウトライン、保存済みは塗りつぶし） */}
+      <YStack position="absolute" bottom={0} left={0} right={0} backgroundColor="#000" paddingHorizontal="$6" paddingBottom="$8" paddingTop="$3">
+        {isBookmarked ? (
+          <PrimaryButton label="保存済み" onPress={handleToggleBookmark} disabled={saving} />
+        ) : (
+          <SecondaryButton label="保存する" onPress={handleToggleBookmark} disabled={saving} />
+        )}
+      </YStack>
     </YStack>
   );
 }
