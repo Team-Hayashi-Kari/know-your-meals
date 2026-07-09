@@ -166,6 +166,7 @@ export const postsRoute = new Hono<Env>()
         createdAt: posts.createdAt,
         updatedAt: posts.updatedAt,
         imageKey: images.key,
+        bookmarkId: bookmarks.id,
         shop: {
           id: shops.id,
           googlePlaceId: shops.googlePlaceId,
@@ -179,12 +180,13 @@ export const postsRoute = new Hono<Env>()
       .innerJoin(shops, eq(posts.shopId, shops.id))
       .leftJoin(images, eq(images.postId, posts.id))
       .leftJoin(friendships, postFriendshipCondition(authUser.id))
+      .leftJoin(bookmarks, and(eq(bookmarks.postId, posts.id), eq(bookmarks.userId, authUser.id)))
       .where(and(eq(posts.id, rawId), or(eq(posts.userId, authUser.id), eq(friendships.status, 'accepted'))));
 
     if (!row) return c.json({ error: 'Not found' }, 404);
 
-    const { imageKey, ...post } = row;
-    return c.json({ ...post, imageUrl: imageKey ? `/api/images/${imageKey}` : null });
+    const { imageKey, bookmarkId, ...post } = row;
+    return c.json({ ...post, imageUrl: imageKey ? `/api/images/${imageKey}` : null, isBookmarked: bookmarkId !== null });
   })
   .post('/:id/bookmark', requireAuth, async (c) => {
     const authUser = c.get('user');
