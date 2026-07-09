@@ -2,7 +2,7 @@ import { bookmarks, createDb, friendships, images, posts, shops, user } from '@r
 import { and, desc, eq, ne, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { Hono } from 'hono';
-import { friendshipPairCondition } from '../lib/visibility';
+import { postFriendshipCondition } from '../lib/visibility';
 import { requireAuth } from '../middleware/auth';
 import type { Env } from '../types';
 
@@ -103,6 +103,16 @@ type FriendUser = {
   bio: string | null;
 };
 
+function toFriendUser(friend: FriendUser): FriendUser {
+  return {
+    id: friend.id,
+    handle: friend.handle,
+    name: friend.name,
+    image: friend.image,
+    bio: friend.bio,
+  };
+}
+
 export const me = new Hono<Env>()
   .get('/', requireAuth, async (c) => {
     const authUser = c.get('user');
@@ -195,6 +205,57 @@ export const me = new Hono<Env>()
       return c.json({ error: 'Internal server error' }, 500);
     }
   })
+  .get('/friend-requests', requireAuth, async (c) => {
+    const direction = c.req.query('direction');
+    if (!['received', 'sent'].includes(direction ?? '')) return c.json({ error: 'Invalid direction' }, 400);
+
+    const authUser = c.get('user');
+    const db = createDb(c.env.DATABASE_URL);
+
+    try {
+      let rows: FriendUser[] = [];
+
+      if (direction === 'received') {
+        const receivedRows = await db
+          .select({
+            requester: {
+              id: requester.id,
+              handle: requester.handle,
+              name: requester.name,
+              image: requester.image,
+              bio: requester.bio,
+            },
+          })
+          .from(friendships)
+          .innerJoin(requester, eq(friendships.requesterId, requester.id))
+          .where(and(eq(friendships.status, 'pending'), eq(friendships.addresseeId, authUser.id)))
+          .orderBy(desc(friendships.createdAt));
+
+        rows = receivedRows.map((row) => toFriendUser(row.requester));
+      } else {
+        const sentRows = await db
+          .select({
+            addressee: {
+              id: addressee.id,
+              handle: addressee.handle,
+              name: addressee.name,
+              image: addressee.image,
+              bio: addressee.bio,
+            },
+          })
+          .from(friendships)
+          .innerJoin(addressee, eq(friendships.addresseeId, addressee.id))
+          .where(and(eq(friendships.status, 'pending'), eq(friendships.requesterId, authUser.id)))
+          .orderBy(desc(friendships.createdAt));
+
+        rows = sentRows.map((row) => toFriendUser(row.addressee));
+      }
+
+      return c.json(rows);
+    } catch {
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  })
   .get('/posts', requireAuth, async (c) => {
     const authUser = c.get('user');
     const db = createDb(c.env.DATABASE_URL);
@@ -264,7 +325,7 @@ export const me = new Hono<Env>()
         .innerJoin(shops, eq(posts.shopId, shops.id))
         .leftJoin(images, eq(images.postId, posts.id))
         .innerJoin(user, eq(posts.userId, user.id))
-        .leftJoin(friendships, friendshipPairCondition(authUser.id))
+        .leftJoin(friendships, postFriendshipCondition(authUser.id))
         .where(and(eq(bookmarks.userId, authUser.id), or(eq(posts.userId, authUser.id), eq(friendships.status, 'accepted'))))
         .orderBy(desc(bookmarks.createdAt));
 

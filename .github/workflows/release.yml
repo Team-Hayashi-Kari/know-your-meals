@@ -103,12 +103,14 @@ jobs:
           echo "EOF" >> "$GITHUB_OUTPUT"
       - name: Generate highlights with Claude
         id: highlights
+        continue-on-error: true
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           COMMITS: ${{ steps.commits.outputs.log }}
         run: |
+          set +e
           RESPONSE=$(curl -sf https://api.anthropic.com/v1/messages \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "Authorization: Bearer $CLAUDE_CODE_OAUTH_TOKEN" \
             -H "anthropic-version: 2023-06-01" \
             -H "content-type: application/json" \
             -d "$(jq -n \
@@ -122,10 +124,15 @@ jobs:
                 }]
               }'
             )")
-          HIGHLIGHTS=$(echo "$RESPONSE" | jq -r '.content[0].text')
+          CURL_STATUS=$?
+          HIGHLIGHTS=""
+          if [ "$CURL_STATUS" -eq 0 ]; then
+            HIGHLIGHTS=$(echo "$RESPONSE" | jq -r '.content[0].text // empty' 2>/dev/null)
+          fi
           echo "text<<EOF" >> "$GITHUB_OUTPUT"
           echo "$HIGHLIGHTS" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
+          exit 0
 
   release:
     needs: [deploy-web, generate-highlights]
@@ -157,6 +164,18 @@ jobs:
         run: |
           escaped="${REF_NAME//-/--}"
           echo "escaped=$escaped" >> "$GITHUB_OUTPUT"
+      - name: Build highlights section
+        id: highlights_section
+        env:
+          HIGHLIGHTS: ${{ needs.generate-highlights.outputs.text }}
+        run: |
+          SECTION=""
+          if [ -n "$HIGHLIGHTS" ]; then
+            SECTION=$'## ✨ このリリースのハイライト\n\n'"$HIGHLIGHTS"$'\n\n---\n'
+          fi
+          echo "section<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$SECTION" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -176,8 +195,4 @@ jobs:
 
             ---
 
-            ## ✨ このリリースのハイライト
-
-            ${{ needs.generate-highlights.outputs.text }}
-
-            ---
+            ${{ steps.highlights_section.outputs.section }}

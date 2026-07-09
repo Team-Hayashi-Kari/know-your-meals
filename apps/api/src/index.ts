@@ -11,7 +11,7 @@ import type { Env } from './types';
 
 const apiCors = cors({
   origin: ['knowyourmeals://', 'exp://', 'http://localhost:8081'],
-  allowMethods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+  allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'expo-origin'],
   credentials: true,
 });
