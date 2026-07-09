@@ -1,6 +1,4 @@
 import { bookmarks, createDb, friendships, images, posts, shops, user } from '@repo/db';
-import { and, desc, eq, or } from 'drizzle-orm';
-import { createDb, friendships, images, posts, shops, user } from '@repo/db';
 import { and, desc, eq, ne, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { Hono } from 'hono';
