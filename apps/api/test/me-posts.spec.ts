@@ -153,7 +153,15 @@ mock.module('@repo/db', () => ({
     id: 'friendships.id',
     requesterId: 'friendships.requesterId',
     addresseeId: 'friendships.addresseeId',
+    status: 'friendships.status',
   },
+  bookmarks: {
+    id: 'bookmarks.id',
+    userId: 'bookmarks.userId',
+    postId: 'bookmarks.postId',
+    createdAt: 'bookmarks.createdAt',
+  },
+  pinEmojiEnum: { enumValues: ['🍜', '🍣', '🍛', '🍙', '🍔', '🍕', '🥩', '🍰', '🍺', '🥟'] },
 }));
 
 const { default: app } = await import('../src/index');
