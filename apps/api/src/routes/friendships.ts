@@ -1,6 +1,7 @@
 import { createDb, friendships, user } from '@repo/db';
-import { and, eq, or } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { friendshipPairCondition } from '../lib/friendship';
 import { requireAuth } from '../middleware/auth';
 import type { Env } from '../types';
 
@@ -82,6 +83,7 @@ export const friendshipsRoute = new Hono<Env>()
     if (!Number.isInteger(id) || id <= 0) return c.json({ error: 'Invalid friendship id' }, 400);
     const body = await c.req.json<UpdateFriendshipBody>().catch(() => null);
     const status = body?.status;
+  const [existing] = await db.select().from(friendships).where(friendshipPairCondition(currentUser.id, target.id));
 
     if (!body || (status !== 'accepted' && status !== 'denied')) {
       return c.json({ error: 'status must be accepted or denied' }, 400);
