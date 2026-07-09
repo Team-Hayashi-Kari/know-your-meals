@@ -97,7 +97,7 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: '味噌ラーメンが最高でした',
     imageUri: null,
     isFriendPost: true,
-    postedAt: '2026-07-10T11:20:00+09:00',
+    postedAt: '2026-07-09T22:20:00+09:00',
     distanceMeters: 320,
   },
   {
@@ -110,7 +110,7 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: '大将のおまかせが絶品',
     imageUri: null,
     isFriendPost: false,
-    postedAt: '2026-07-10T10:05:00+09:00',
+    postedAt: '2026-07-09T19:05:00+09:00',
     distanceMeters: 540,
   },
   {
