@@ -68,3 +68,176 @@ export async function sendFriendRequest(userId: string): Promise<void> {
   const target = mockUsers.find((u) => u.id === userId);
   if (target) target.relationshipStatus = 'pending_sent';
 }
+
+// pinEmojiEnum (packages/db/src/schema/content.ts) と揃える
+export type PinEmoji = '🍜' | '🍣' | '🍛' | '🍙' | '🍔' | '🍕' | '🥩' | '🍰' | '🍺' | '🥟';
+
+export type NearbyPost = {
+  id: string;
+  userName: string;
+  userInitial: string;
+  userColor: string;
+  storeName: string;
+  genreEmoji: PinEmoji;
+  comment: string;
+  imageUri: string | null;
+  isFriendPost: boolean;
+};
+
+const mockNearbyPosts: NearbyPost[] = [
+  {
+    id: 'p1',
+    userName: 'Yuki Tanaka',
+    userInitial: 'Y',
+    userColor: '#F4A259',
+    storeName: '麺屋 一心',
+    genreEmoji: '🍜',
+    comment: '味噌ラーメンが最高でした',
+    imageUri: null,
+    isFriendPost: true,
+  },
+  {
+    id: 'p2',
+    userName: 'Ryo Sato',
+    userInitial: 'R',
+    userColor: '#5B8C5A',
+    storeName: '鮨処 なかむら',
+    genreEmoji: '🍣',
+    comment: '大将のおまかせが絶品',
+    imageUri: null,
+    isFriendPost: false,
+  },
+  {
+    id: 'p3',
+    userName: 'Aoi',
+    userInitial: 'A',
+    userColor: '#4A7A96',
+    storeName: '中華飯店 龍',
+    genreEmoji: '🍛',
+    comment: '麻婆豆腐が辛旨い',
+    imageUri: null,
+    isFriendPost: false,
+  },
+  {
+    id: 'p4',
+    userName: 'Takumi',
+    userInitial: 'T',
+    userColor: '#B85C5C',
+    storeName: 'おにぎり結び',
+    genreEmoji: '🍙',
+    comment: '塩むすびが染みる',
+    imageUri: null,
+    isFriendPost: false,
+  },
+  {
+    id: 'p5',
+    userName: 'Yuki Tanaka',
+    userInitial: 'Y',
+    userColor: '#F4A259',
+    storeName: 'バーガーテラス',
+    genreEmoji: '🍔',
+    comment: 'パティが分厚い！',
+    imageUri: null,
+    isFriendPost: true,
+  },
+  {
+    id: 'p6',
+    userName: 'Mika',
+    userInitial: 'M',
+    userColor: '#8C6FA9',
+    storeName: 'ピッツェリア ソーレ',
+    genreEmoji: '🍕',
+    comment: 'マルゲリータが本格的',
+    imageUri: null,
+    isFriendPost: false,
+  },
+  {
+    id: 'p7',
+    userName: 'Kenji',
+    userInitial: 'K',
+    userColor: '#3D8C7D',
+    storeName: '焼肉 炎',
+    genreEmoji: '🥩',
+    comment: '特上カルビ食べ放題',
+    imageUri: null,
+    isFriendPost: false,
+  },
+  {
+    id: 'p8',
+    userName: 'Ryo Sato',
+    userInitial: 'R',
+    userColor: '#5B8C5A',
+    storeName: 'パティスリー花',
+    genreEmoji: '🍰',
+    comment: 'モンブランが季節限定',
+    imageUri: null,
+    isFriendPost: false,
+  },
+  {
+    id: 'p9',
+    userName: 'Aoi',
+    userInitial: 'A',
+    userColor: '#4A7A96',
+    storeName: '角打ち酒場 星',
+    genreEmoji: '🍺',
+    comment: 'ハイボールと餃子が最強',
+    imageUri: null,
+    isFriendPost: false,
+  },
+  {
+    id: 'p10',
+    userName: 'Takumi',
+    userInitial: 'T',
+    userColor: '#B85C5C',
+    storeName: '点心楼',
+    genreEmoji: '🥟',
+    comment: '小籠包の肉汁がやばい',
+    imageUri: null,
+    isFriendPost: false,
+  },
+];
+
+const mockBookmarkedPostIds = new Set<string>();
+
+// GET /api/map/posts?bbox= 相当
+export async function getNearbyPosts(lat: number, lng: number): Promise<NearbyPost[]> {
+  await delay(300);
+  // 本物のAPIでは lat/lng から算出した bbox で範囲検索する
+  void lat;
+  void lng;
+  return mockNearbyPosts;
+}
+
+// GET /api/posts/:id 相当
+export async function getPostById(id: string): Promise<NearbyPost | undefined> {
+  await delay(200);
+  return mockNearbyPosts.find((p) => p.id === id);
+}
+
+// POST /api/posts 相当（multipart）
+export async function createPost(draft: { storeId: string; comment: string; pin: PinEmoji; imageUri: string | null }): Promise<NearbyPost> {
+  await delay(500);
+  const newPost: NearbyPost = {
+    id: `p${mockNearbyPosts.length + 1}`,
+    userName: mockMe.name || 'あなた',
+    userInitial: (mockMe.name || 'あ').charAt(0),
+    userColor: '#F4A259',
+    storeName: draft.storeId,
+    genreEmoji: draft.pin,
+    comment: draft.comment,
+    imageUri: draft.imageUri,
+    isFriendPost: false,
+  };
+  mockNearbyPosts.unshift(newPost);
+  return newPost;
+}
+
+// POST/DELETE /api/posts/:id/bookmark 相当
+export async function toggleBookmark(postId: string): Promise<void> {
+  await delay(200);
+  if (mockBookmarkedPostIds.has(postId)) {
+    mockBookmarkedPostIds.delete(postId);
+  } else {
+    mockBookmarkedPostIds.add(postId);
+  }
+}
