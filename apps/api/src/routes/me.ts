@@ -1,7 +1,5 @@
-import { createDb, images, posts, shops, user } from '@repo/db';
-import { and, desc, eq, ne } from 'drizzle-orm';
 import { createDb, friendships, images, posts, shops, user } from '@repo/db';
-import { and, desc, eq, or } from 'drizzle-orm';
+import { and, desc, eq, ne, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { Hono } from 'hono';
 import { requireAuth } from '../middleware/auth';
@@ -146,6 +144,9 @@ export const me = new Hono<Env>()
       return c.json(row);
     } catch (error) {
       if (isUniqueConstraintError(error)) return c.json({ error: 'Handle already exists' }, 409);
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  })
   .get('/friends', requireAuth, async (c) => {
     const authUser = c.get('user');
     const db = createDb(c.env.DATABASE_URL);
