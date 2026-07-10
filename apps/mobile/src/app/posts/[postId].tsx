@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { Alert, Pressable } from 'react-native';
 import { ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
 import { Avatar } from '../../components/post-flow/Avatar';
 import { MiniHeader } from '../../components/post-flow/MiniHeader';
 import { PhotoSlot } from '../../components/post-flow/PhotoSlot';
 import { PrimaryButton } from '../../components/post-flow/PrimaryButton';
 import { SecondaryButton } from '../../components/post-flow/SecondaryButton';
-import { getPostById, toggleBookmark, type NearbyPost } from '../../lib/mock-api';
+import { deletePost, getPostById, toggleBookmark, type NearbyPost } from '../../lib/mock-api';
 
 export default function PostDetailScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
@@ -29,6 +30,26 @@ export default function PostDetailScreen() {
     await toggleBookmark(post.id);
     setIsBookmarked((prev) => !prev);
     setSaving(false);
+  };
+
+  const handleDeletePost = async () => {
+    if (!post) return;
+    await deletePost(post.id);
+    router.back();
+  };
+
+  const handleOpenMenu = () => {
+    if (!post) return;
+    Alert.alert(
+      '投稿メニュー',
+      undefined,
+      post.isMine
+        ? [
+            { text: '削除する', style: 'destructive', onPress: handleDeletePost },
+            { text: 'キャンセル', style: 'cancel' },
+          ]
+        : [{ text: '閉じる', style: 'cancel' }],
+    );
   };
 
   if (post === undefined) {
@@ -54,7 +75,16 @@ export default function PostDetailScreen() {
 
   return (
     <YStack flex={1} backgroundColor="#000">
-      <MiniHeader onBack={() => router.back()} />
+      <MiniHeader
+        onBack={() => router.back()}
+        rightAction={
+          <Pressable onPress={handleOpenMenu} hitSlop={12} accessibilityRole="button" accessibilityLabel="メニュー">
+            <Text fontSize={22} color="#fff">
+              ⋯
+            </Text>
+          </Pressable>
+        }
+      />
 
       <ScrollView flex={1} contentContainerStyle={{ paddingBottom: 140 }}>
         {/* ヒーロー写真 */}
