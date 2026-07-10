@@ -16,6 +16,7 @@
     "@tamagui/animations-reanimated": "^2.4.2",
     "@tamagui/babel-plugin": "^2.4.2",
     "@tamagui/config": "^2.4.2",
+    "@vis.gl/react-google-maps": "^1.9.0",
     "expo": "~57.0.1",
     "expo-constants": "^57.0.3",
     "expo-image-picker": "~57.0.2",
