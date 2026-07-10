@@ -244,8 +244,7 @@ export const postsRoute = new Hono<Env>()
       throw err;
     }
 
-    const { imageKey, ...post } = row;
-    return c.json({ ...post, imageUrl: imageKey ? `/api/images/${imageKey}` : null });
+    return c.json({ bookmarked: true }, 201);
   })
   .delete('/:id/bookmark', requireAuth, async (c) => {
     const authUser = c.get('user');
@@ -262,5 +261,4 @@ export const postsRoute = new Hono<Env>()
     if (!deleted) return c.json({ error: 'Bookmark not found' }, 404);
 
     return c.body(null, 204);
-    return c.json({ bookmarked: true }, 201);
   });
