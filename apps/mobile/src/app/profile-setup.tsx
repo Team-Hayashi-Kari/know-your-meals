@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image as RNImage } from 'react-native';
 import { Button, Input, ScrollView, Spinner, Text, TextArea, XStack, YStack } from 'tamagui';
-import { updateMe } from '../lib/api';
+import { getMe, updateMe } from '../lib/api';
 import { ApiError } from '../lib/api-client';
 import { checkHandleAvailable } from '../lib/mock-api';
 
@@ -18,6 +18,7 @@ export default function ProfileSetupScreen() {
   const [name, setName] = useState('');
   const [handle, setHandle] = useState('');
   const [bio, setBio] = useState('');
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving, setSaving] = useState(false);
   const [image, setImage] = useState<string | null>(null);
 
@@ -29,6 +30,32 @@ export default function ProfileSetupScreen() {
 
   const nameCount = countChars(name.trim());
   const handleCount = countChars(handle.trim());
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getMe()
+      .then((me) => {
+        if (cancelled) return;
+        if (me.handle) {
+          router.replace('/home');
+          return;
+        }
+
+        setName(me.name ?? '');
+        setBio(me.bio ?? '');
+        setImage(me.image ?? null);
+        setLoadingProfile(false);
+      })
+      .catch((error) => {
+        console.error('[プロフィール取得エラー]', error);
+        if (!cancelled) router.replace('/');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   useEffect(() => {
     const validationError = getNameValidationError(name.trim());
@@ -138,6 +165,14 @@ export default function ProfileSetupScreen() {
       setSaving(false);
     }
   };
+
+  if (loadingProfile) {
+    return (
+      <YStack flex={1} backgroundColor="#000" justifyContent="center" alignItems="center">
+        <Spinner color="#fff" size="large" />
+      </YStack>
+    );
+  }
 
   return (
     <ScrollView
