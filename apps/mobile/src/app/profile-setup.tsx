@@ -1,7 +1,7 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image as RNImage } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { Button, Input, ScrollView, Spinner, Text, TextArea, XStack, YStack } from 'tamagui';
 import { checkHandleAvailable, updateMe } from '../lib/mock-api';
 
@@ -128,57 +128,142 @@ export default function ProfileSetupScreen() {
       }}
     >
       <XStack justifyContent="space-between" alignItems="center" marginBottom="$6">
-        <Text color="#555" fontSize={13} fontWeight="600">ステップ 1 / 2</Text>
-        <Text color="#555" fontSize={13} fontWeight="600" onPress={() => router.replace('/home')}>スキップ</Text>
+        <Text color="#555" fontSize={13} fontWeight="600">
+          ステップ 1 / 2
+        </Text>
+        <Text color="#555" fontSize={13} fontWeight="600" onPress={() => router.replace('/home')}>
+          スキップ
+        </Text>
       </XStack>
 
-      <Text color="#fff" fontSize={32} fontWeight="800" lineHeight={38} marginBottom="$6">プロフィールを{'\n'}設定しよう</Text>
+      <Text color="#fff" fontSize={32} fontWeight="800" lineHeight={38} marginBottom="$6">
+        プロフィールを{'\n'}設定しよう
+      </Text>
 
       <YStack alignItems="center" marginBottom="$8">
         <YStack width={96} height={96} position="relative" onPress={handlePickImage} pressStyle={{ opacity: 0.8 }}>
-          <YStack width={96} height={96} borderRadius={48} backgroundColor={image ? '#1a1a1a' : getColorFromName(name)} justifyContent="center" alignItems="center" overflow="hidden">
+          <YStack
+            width={96}
+            height={96}
+            borderRadius={48}
+            backgroundColor={image ? '#1a1a1a' : getColorFromName(name)}
+            justifyContent="center"
+            alignItems="center"
+            overflow="hidden"
+          >
             {image ? (
               <RNImage source={{ uri: image }} style={{ width: 96, height: 96 }} resizeMode="cover" />
             ) : (
-              <Text color="#fff" fontSize={40} fontWeight="700">{getInitial(name)}</Text>
+              <Text color="#fff" fontSize={40} fontWeight="700">
+                {getInitial(name)}
+              </Text>
             )}
           </YStack>
 
-          <YStack position="absolute" bottom={0} right={0} width={30} height={30} borderRadius={15} backgroundColor="#ffd400" justifyContent="center" alignItems="center" borderWidth={3} borderColor="#000">
-            <Text color="#000" fontSize={16} fontWeight="700" lineHeight={16}>+</Text>
+          <YStack
+            position="absolute"
+            bottom={0}
+            right={0}
+            width={30}
+            height={30}
+            borderRadius={15}
+            backgroundColor="#ffd400"
+            justifyContent="center"
+            alignItems="center"
+            borderWidth={3}
+            borderColor="#000"
+          >
+            <Text color="#000" fontSize={16} fontWeight="700" lineHeight={16}>
+              +
+            </Text>
           </YStack>
         </YStack>
       </YStack>
 
       <YStack gap="$2" marginBottom="$4">
         <XStack justifyContent="space-between" alignItems="center">
-          <Text color="#555" fontSize={14} fontWeight="600">名前</Text>
-          <Text color={nameCount > NAME_MAX ? '#ff4444' : '#555'} fontSize={13}>{nameCount}/{NAME_MAX}</Text>
+          <Text color="#555" fontSize={14} fontWeight="600">
+            名前
+          </Text>
+          <Text color={nameCount > NAME_MAX ? '#ff4444' : '#555'} fontSize={13}>
+            {nameCount}/{NAME_MAX}
+          </Text>
         </XStack>
-        <Input value={name} onChangeText={setName} placeholder="田中 ゆき" placeholderTextColor="$gray9" backgroundColor="#1a1a1a" borderWidth={0} color="#fff" height={52} fontSize={16} borderRadius="$4" />
-        {nameError !== '' && <Text color="#ff4444" fontSize={13}>{nameError}</Text>}
+        <Input
+          value={name}
+          onChangeText={setName}
+          placeholder="田中 ゆき"
+          placeholderTextColor="$gray9"
+          backgroundColor="#1a1a1a"
+          borderWidth={0}
+          color="#fff"
+          height={52}
+          fontSize={16}
+          borderRadius="$4"
+        />
+        {nameError !== '' && (
+          <Text color="#ff4444" fontSize={13}>
+            {nameError}
+          </Text>
+        )}
       </YStack>
 
       <YStack gap="$2" marginBottom="$4">
         <XStack justifyContent="space-between" alignItems="center">
-          <Text color="#555" fontSize={14} fontWeight="600">ユーザーID</Text>
-          <Text color={handleCount > HANDLE_MAX ? '#ff4444' : '#555'} fontSize={13}>{handleCount}/{HANDLE_MAX}</Text>
+          <Text color="#555" fontSize={14} fontWeight="600">
+            ユーザーID
+          </Text>
+          <Text color={handleCount > HANDLE_MAX ? '#ff4444' : '#555'} fontSize={13}>
+            {handleCount}/{HANDLE_MAX}
+          </Text>
         </XStack>
         {/* @ を左に固定し、ユーザーは @ を除いた部分だけ入力 */}
         <XStack alignItems="center" backgroundColor="#1a1a1a" borderRadius="$4" height={52} paddingLeft="$3">
-          <Text color="#888" fontSize={16} fontWeight="600">@</Text>
-          <Input flex={1} value={handle} onChangeText={setHandle} placeholder="yuki_eats" placeholderTextColor="$gray9" backgroundColor="transparent" borderWidth={0} color="#fff" height={52} fontSize={16} autoCapitalize="none" />
+          <Text color="#888" fontSize={16} fontWeight="600">
+            @
+          </Text>
+          <Input
+            flex={1}
+            value={handle}
+            onChangeText={setHandle}
+            placeholder="yuki_eats"
+            placeholderTextColor="$gray9"
+            backgroundColor="transparent"
+            borderWidth={0}
+            color="#fff"
+            height={52}
+            fontSize={16}
+            autoCapitalize="none"
+          />
         </XStack>
         {/* ID重複チェックの表示 */}
-        {handleStatus === 'checking' && <Text color="#888" fontSize={13}>確認中…</Text>}
-        {handleStatus === 'available' && <Text color="#2ecc71" fontSize={13}>✓ このIDは使えます</Text>}
-        {handleStatus === 'taken' && <Text color="#ff4444" fontSize={13}>✗ このIDは使われています</Text>}
+        {handleStatus === 'checking' && (
+          <Text color="#888" fontSize={13}>
+            確認中…
+          </Text>
+        )}
+        {handleStatus === 'available' && (
+          <Text color="#2ecc71" fontSize={13}>
+            ✓ このIDは使えます
+          </Text>
+        )}
+        {handleStatus === 'taken' && (
+          <Text color="#ff4444" fontSize={13}>
+            ✗ このIDは使われています
+          </Text>
+        )}
         {/* 次へを押したときのエラー（形式NG・文字数オーバーなど） */}
-        {handleError !== '' && <Text color="#ff4444" fontSize={13}>{handleError}</Text>}
+        {handleError !== '' && (
+          <Text color="#ff4444" fontSize={13}>
+            {handleError}
+          </Text>
+        )}
       </YStack>
 
       <YStack gap="$2" marginBottom="$6">
-        <Text color="#555" fontSize={14} fontWeight="600">自己紹介</Text>
+        <Text color="#555" fontSize={14} fontWeight="600">
+          自己紹介
+        </Text>
         <TextArea
           value={bio}
           onChangeText={setBio}
@@ -195,8 +280,23 @@ export default function ProfileSetupScreen() {
         />
       </YStack>
 
-      <Button onPress={handleNext} disabled={saving} backgroundColor="#fff" pressStyle={{ backgroundColor: '#e8e8e8', scale: 0.97 }} disabledStyle={{ opacity: 0.5 }} borderRadius="$5" height={60} marginTop="$4">
-        {saving ? <Spinner color="#000" /> : <Text color="#000" fontWeight="700" fontSize={16}>次へ</Text>}
+      <Button
+        onPress={handleNext}
+        disabled={saving}
+        backgroundColor="#fff"
+        pressStyle={{ backgroundColor: '#e8e8e8', scale: 0.97 }}
+        disabledStyle={{ opacity: 0.5 }}
+        borderRadius="$5"
+        height={60}
+        marginTop="$4"
+      >
+        {saving ? (
+          <Spinner color="#000" />
+        ) : (
+          <Text color="#000" fontWeight="700" fontSize={16}>
+            次へ
+          </Text>
+        )}
       </Button>
     </ScrollView>
   );
