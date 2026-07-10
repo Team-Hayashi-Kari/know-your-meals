@@ -16,7 +16,9 @@ type Tab = {
   Icon: (props: { color: string }) => ReactElement;
 };
 
-// デザイン案 Know Your Meals - MVP.dc.html の④セクション（195〜198行目）のSVG定義をそのまま使用
+// デザイン案 Know Your Meals - MVP.dc.html の④セクション（195〜198行目）のSVG定義を使用。
+// ただし3番目（保存済み）は元デザインの角丸四角+再生ボタン風アイコンが機能と噛み合わないため、
+// 同系統（Feather Icons風、stroke基調）のブックマークアイコンに差し替えている。
 const TABS: Tab[] = [
   {
     key: 'map',
@@ -47,8 +49,7 @@ const TABS: Tab[] = [
     label: '保存済み',
     Icon: ({ color }) => (
       <Svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-        <Rect x={4} y={4} width={16} height={16} rx={4} />
-        <Path d="M10.5 9l5 3-5 3z" fill={color} stroke="none" />
+        <Path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
       </Svg>
     ),
   },
