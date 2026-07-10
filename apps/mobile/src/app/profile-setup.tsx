@@ -1,5 +1,7 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { Image as RNImage } from 'react-native';
 import { Button, Input, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
 import { updateMe } from '../lib/mock-api';
 
@@ -10,12 +12,25 @@ export default function ProfileSetupScreen() {
   const [handle, setHandle] = useState('');
   const [bio, setBio] = useState('');
   const [saving, setSaving] = useState(false);
+  const [image, setImage] = useState<string | null>(null);
 
-  // 「次へ」を押したときの処理：入力内容を保存してから次の画面へ
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
   const handleNext = async () => {
     setSaving(true);
     try {
-      await updateMe({ name, handle, bio });
+      await updateMe({ name, handle, bio, image });
       router.replace('/find-friends');
     } catch (e) {
       console.error('[プロフィール保存エラー]', e);
@@ -34,7 +49,6 @@ export default function ProfileSetupScreen() {
         paddingBottom: 32,
       }}
     >
-      {/* 上部：ステップ表示 と スキップ */}
       <XStack justifyContent="space-between" alignItems="center" marginBottom="$6">
         <Text color="#555" fontSize={13} fontWeight="600">
           ステップ 1 / 2
@@ -44,25 +58,29 @@ export default function ProfileSetupScreen() {
         </Text>
       </XStack>
 
-      {/* 見出し */}
       <Text color="#fff" fontSize={32} fontWeight="800" lineHeight={38} marginBottom="$6">
         プロフィールを{'\n'}設定しよう
       </Text>
 
-      {/* プロフィールアイコン */}
       <YStack alignItems="center" marginBottom="$8">
-        <YStack
-          width={96}
-          height={96}
-          borderRadius={48}
-          backgroundColor={getColorFromName(name)}
-          justifyContent="center"
-          alignItems="center"
-          position="relative"
-        >
-          <Text color="#fff" fontSize={40} fontWeight="700">
-            {getInitial(name)}
-          </Text>
+        <YStack width={96} height={96} position="relative" onPress={handlePickImage} pressStyle={{ opacity: 0.8 }}>
+          <YStack
+            width={96}
+            height={96}
+            borderRadius={48}
+            backgroundColor={image ? '#1a1a1a' : getColorFromName(name)}
+            justifyContent="center"
+            alignItems="center"
+            overflow="hidden"
+          >
+            {image ? (
+              <RNImage source={{ uri: image }} style={{ width: 96, height: 96 }} resizeMode="cover" />
+            ) : (
+              <Text color="#fff" fontSize={40} fontWeight="700">
+                {getInitial(name)}
+              </Text>
+            )}
+          </YStack>
 
           <YStack
             position="absolute"
@@ -84,7 +102,6 @@ export default function ProfileSetupScreen() {
         </YStack>
       </YStack>
 
-      {/* 名前 */}
       <YStack gap="$2" marginBottom="$4">
         <Text color="#555" fontSize={14} fontWeight="600">
           名前
@@ -103,7 +120,6 @@ export default function ProfileSetupScreen() {
         />
       </YStack>
 
-      {/* ユーザーID */}
       <YStack gap="$2" marginBottom="$4">
         <Text color="#555" fontSize={14} fontWeight="600">
           ユーザーID
@@ -123,7 +139,6 @@ export default function ProfileSetupScreen() {
         />
       </YStack>
 
-      {/* 自己紹介 */}
       <YStack gap="$2" marginBottom="$6">
         <Text color="#555" fontSize={14} fontWeight="600">
           自己紹介
@@ -145,7 +160,6 @@ export default function ProfileSetupScreen() {
         />
       </YStack>
 
-      {/* 下部：次へボタン */}
       <Button
         onPress={handleNext}
         disabled={saving}
@@ -168,7 +182,6 @@ export default function ProfileSetupScreen() {
   );
 }
 
-// ===== 道具（関数） =====
 function getInitial(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) return '?';
