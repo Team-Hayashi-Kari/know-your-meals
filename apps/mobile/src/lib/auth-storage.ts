@@ -1,10 +1,10 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { MMKV } from 'react-native-mmkv';
+import { createMMKV } from 'react-native-mmkv';
 
 const ENCRYPTION_KEY_NAME = 'mmkv-auth-encryption-key';
 
-let mmkv: MMKV | null = null;
+let mmkv: ReturnType<typeof createMMKV> | null = null;
 
 function generateEncryptionKey(): string {
   const bytes = new Uint8Array(32);
@@ -26,7 +26,7 @@ export async function initAuthStorage(): Promise<void> {
     await SecureStore.setItemAsync(ENCRYPTION_KEY_NAME, key);
   }
 
-  mmkv = new MMKV({ id: 'auth', encryptionKey: key });
+  mmkv = createMMKV({ id: 'auth', encryptionKey: key });
 }
 
 export const authStorage = {
