@@ -1,5 +1,5 @@
 import { bookmarks, createDb, friendships, images, posts, shops, user } from '@repo/db';
-import { and, desc, eq, ne, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { Hono } from 'hono';
 import { postFriendshipCondition } from '../lib/visibility';
@@ -113,6 +113,40 @@ function toFriendUser(friend: FriendUser): FriendUser {
   };
 }
 
+type Db = ReturnType<typeof createDb>;
+
+async function getMutualFriendCounts(db: Db, authUserId: string, requesterIds: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>(requesterIds.map((id) => [id, 0]));
+  if (requesterIds.length === 0) return counts;
+
+  const myFriendRows = await db
+    .select({ requesterId: friendships.requesterId, addresseeId: friendships.addresseeId })
+    .from(friendships)
+    .where(and(eq(friendships.status, 'accepted'), or(eq(friendships.requesterId, authUserId), eq(friendships.addresseeId, authUserId))));
+
+  const myFriendIds = new Set(myFriendRows.map((row) => (row.requesterId === authUserId ? row.addresseeId : row.requesterId)));
+  if (myFriendIds.size === 0) return counts;
+
+  const theirFriendRows = await db
+    .select({ requesterId: friendships.requesterId, addresseeId: friendships.addresseeId })
+    .from(friendships)
+    .where(
+      and(
+        eq(friendships.status, 'accepted'),
+        or(inArray(friendships.requesterId, requesterIds), inArray(friendships.addresseeId, requesterIds)),
+      ),
+    );
+
+  for (const row of theirFriendRows) {
+    const requesterSideKnown = requesterIds.includes(row.requesterId);
+    const requesterId = requesterSideKnown ? row.requesterId : row.addresseeId;
+    const otherId = requesterSideKnown ? row.addresseeId : row.requesterId;
+    if (myFriendIds.has(otherId)) counts.set(requesterId, (counts.get(requesterId) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
 export const me = new Hono<Env>()
   .get('/', requireAuth, async (c) => {
     const authUser = c.get('user');
@@ -213,11 +247,12 @@ export const me = new Hono<Env>()
     const db = createDb(c.env.DATABASE_URL);
 
     try {
-      let rows: FriendUser[] = [];
+      let rows: (FriendUser & { friendshipId?: number; mutualFriendCount?: number })[] = [];
 
       if (direction === 'received') {
         const receivedRows = await db
           .select({
+            friendshipId: friendships.id,
             requester: {
               id: requester.id,
               handle: requester.handle,
@@ -231,7 +266,17 @@ export const me = new Hono<Env>()
           .where(and(eq(friendships.status, 'pending'), eq(friendships.addresseeId, authUser.id)))
           .orderBy(desc(friendships.createdAt));
 
-        rows = receivedRows.map((row) => toFriendUser(row.requester));
+        const mutualCounts = await getMutualFriendCounts(
+          db,
+          authUser.id,
+          receivedRows.map((row) => row.requester.id),
+        );
+
+        rows = receivedRows.map((row) => ({
+          friendshipId: row.friendshipId,
+          ...toFriendUser(row.requester),
+          mutualFriendCount: mutualCounts.get(row.requester.id) ?? 0,
+        }));
       } else {
         const sentRows = await db
           .select({
