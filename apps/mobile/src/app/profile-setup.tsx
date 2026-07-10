@@ -9,6 +9,7 @@ import { ApiError } from '../lib/api-client';
 import { checkHandleAvailable } from '../lib/mock-api';
 
 const NAME_MAX = 20;
+const HANDLE_MIN = 3;
 const HANDLE_MAX = 15;
 
 export default function ProfileSetupScreen() {
@@ -30,24 +31,47 @@ export default function ProfileSetupScreen() {
   const handleCount = countChars(handle.trim());
 
   useEffect(() => {
+    const validationError = getNameValidationError(name.trim());
+    setNameError(validationError);
+    setSaveError('');
+  }, [name]);
+
+  useEffect(() => {
     const trimmed = handle.trim();
+    const validationError = getHandleValidationError(trimmed);
     setHandleError('');
+    setSaveError('');
 
     if (!trimmed) {
       setHandleStatus('idle');
       return;
     }
-    if (!isHandleFormatValid(trimmed) || countChars(trimmed) > HANDLE_MAX) {
+    if (validationError) {
       setHandleStatus('idle');
+      setHandleError(validationError);
       return;
     }
+
+    let cancelled = false;
     setHandleStatus('checking');
     const timer = setTimeout(() => {
-      checkHandleAvailable(trimmed).then((ok) => {
-        setHandleStatus(ok ? 'available' : 'taken');
-      });
+      checkHandleAvailable(trimmed)
+        .then((ok) => {
+          if (cancelled) return;
+          setHandleStatus(ok ? 'available' : 'taken');
+          setHandleError('');
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          console.error('[ユーザーID確認エラー]', error);
+          setHandleStatus('idle');
+          setHandleError('IDの確認に失敗しました。通信状況を確認してください');
+        });
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [handle]);
 
   const handlePickImage = async () => {
@@ -72,22 +96,18 @@ export default function ProfileSetupScreen() {
     const trimmedHandle = handle.trim();
     let hasError = false;
 
+    const nameValidationError = getNameValidationError(trimmedName);
     if (!trimmedName) {
       setNameError('名前を入力してください');
       hasError = true;
-    } else if (countChars(trimmedName) > NAME_MAX) {
-      setNameError(`名前は${NAME_MAX}文字以内で入力してください`);
+    } else if (nameValidationError) {
+      setNameError(nameValidationError);
       hasError = true;
     }
 
-    if (!trimmedHandle) {
-      setHandleError('ユーザーIDを入力してください');
-      hasError = true;
-    } else if (!isHandleFormatValid(trimmedHandle)) {
-      setHandleError('IDは半角の英数字・記号（_）のみ使えます');
-      hasError = true;
-    } else if (countChars(trimmedHandle) > HANDLE_MAX) {
-      setHandleError(`IDは${HANDLE_MAX}文字以内で入力してください`);
+    const handleValidationError = getHandleValidationError(trimmedHandle);
+    if (handleValidationError) {
+      setHandleError(handleValidationError);
       hasError = true;
     } else if (handleStatus === 'taken') {
       setHandleError('このIDは使われています');
@@ -309,6 +329,19 @@ function countChars(str: string): number {
   return [...str].length;
 }
 
+function getNameValidationError(name: string): string {
+  if (countChars(name) > NAME_MAX) return `名前は${NAME_MAX}文字以内で入力してください`;
+  return '';
+}
+
 function isHandleFormatValid(h: string): boolean {
   return /^[a-zA-Z0-9_]+$/.test(h);
+}
+
+function getHandleValidationError(handle: string): string {
+  if (!handle) return 'ユーザーIDを入力してください';
+  if (countChars(handle) < HANDLE_MIN) return `IDは${HANDLE_MIN}文字以上で入力してください`;
+  if (!isHandleFormatValid(handle)) return 'IDは半角の英数字・記号（_）のみ使えます';
+  if (countChars(handle) > HANDLE_MAX) return `IDは${HANDLE_MAX}文字以内で入力してください`;
+  return '';
 }
