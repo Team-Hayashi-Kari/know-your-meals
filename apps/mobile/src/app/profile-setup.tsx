@@ -29,9 +29,6 @@ export default function ProfileSetupScreen() {
   const nameCount = countChars(name.trim());
   const handleCount = countChars(handle.trim());
 
-  // IDに使える文字かどうか（半角英数字・アンダースコア・ドットのみ）
-  const isHandleFormatValid = (h: string) => /^[a-zA-Z0-9_.]+$/.test(h);
-
   // handle が変わるたびに、少し待ってから空き状況をチェック
   useEffect(() => {
     const trimmed = handle.trim();
@@ -111,10 +108,8 @@ export default function ProfileSetupScreen() {
     setSaving(true);
     try {
       // 保存時は @ を付けずに素のIDを渡す
-      console.log('保存するbio:', JSON.stringify(bio));
       await updateMe({ name: trimmedName, handle: trimmedHandle, bio, image });
       router.replace('/find-friends');
-
     } catch (e) {
       console.error('[プロフィール保存エラー]', e);
       setSaving(false);
@@ -210,6 +205,11 @@ export default function ProfileSetupScreen() {
 // 見た目どおりに文字数を数える（絵文字を1文字として数える）
 function countChars(str: string): number {
   return [...str].length;
+}
+
+// IDに使える文字かどうか（半角英数字・アンダースコア・ドットのみ）
+function isHandleFormatValid(h: string): boolean {
+  return /^[a-zA-Z0-9_.]+$/.test(h);
 }
 
 function getInitial(name: string): string {
