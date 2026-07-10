@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable } from 'react-native';
+import { Pressable } from 'react-native';
 import { ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
 import { Avatar } from '../../components/post-flow/Avatar';
 import { MiniHeader } from '../../components/post-flow/MiniHeader';
@@ -8,7 +8,7 @@ import { PhotoSlot } from '../../components/post-flow/PhotoSlot';
 import { PinBadge } from '../../components/post-flow/PinBadge';
 import { PrimaryButton } from '../../components/post-flow/PrimaryButton';
 import { SecondaryButton } from '../../components/post-flow/SecondaryButton';
-import { deletePost, getPostById, toggleBookmark, type NearbyPost } from '../../lib/mock-api';
+import { deletePost, getPostById, type NearbyPost, toggleBookmark } from '../../lib/mock-api';
 
 export default function PostDetailScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
@@ -16,6 +16,7 @@ export default function PostDetailScreen() {
   const [post, setPost] = useState<NearbyPost | null | undefined>(undefined);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!postId) return;
@@ -35,22 +36,10 @@ export default function PostDetailScreen() {
 
   const handleDeletePost = async () => {
     if (!post) return;
+    setMenuOpen(false);
+    if (!window.confirm('この投稿を削除しますか？')) return;
     await deletePost(post.id);
     router.back();
-  };
-
-  const handleOpenMenu = () => {
-    if (!post) return;
-    Alert.alert(
-      '投稿メニュー',
-      undefined,
-      post.isMine
-        ? [
-            { text: '削除する', style: 'destructive', onPress: handleDeletePost },
-            { text: 'キャンセル', style: 'cancel' },
-          ]
-        : [{ text: '閉じる', style: 'cancel' }],
-    );
   };
 
   if (post === undefined) {
@@ -76,16 +65,49 @@ export default function PostDetailScreen() {
 
   return (
     <YStack flex={1} backgroundColor="#000">
-      <MiniHeader
-        onBack={() => router.back()}
-        rightAction={
-          <Pressable onPress={handleOpenMenu} hitSlop={12} accessibilityRole="button" accessibilityLabel="メニュー">
-            <Text fontSize={22} color="#fff">
-              ⋯
-            </Text>
-          </Pressable>
-        }
-      />
+      <YStack position="relative">
+        <MiniHeader
+          onBack={() => router.back()}
+          rightAction={
+            <Pressable onPress={() => setMenuOpen((prev) => !prev)} hitSlop={12} accessibilityRole="button" accessibilityLabel="メニュー">
+              <Text fontSize={22} color="#fff">
+                ⋯
+              </Text>
+            </Pressable>
+          }
+        />
+
+        {menuOpen ? (
+          <>
+            {/* メニュー外タップで閉じる（画面全体を覆う透明レイヤー） */}
+            {/* biome-ignore lint/suspicious/noExplicitAny: RNWのみのposition値'fixed'を使うため */}
+            <Pressable onPress={() => setMenuOpen(false)} style={{ position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0 }} />
+            <YStack
+              position="absolute"
+              top={48}
+              right="$5"
+              backgroundColor="#151517"
+              borderWidth={1}
+              borderColor="#2a2a2a"
+              borderRadius="$4"
+              overflow="hidden"
+              minWidth={160}
+            >
+              {post.isMine ? (
+                <Pressable onPress={handleDeletePost}>
+                  <Text color="#e74c3c" fontSize={15} fontWeight="600" paddingHorizontal="$4" paddingVertical="$3">
+                    削除する
+                  </Text>
+                </Pressable>
+              ) : (
+                <Text color="#555" fontSize={14} paddingHorizontal="$4" paddingVertical="$3">
+                  操作はありません
+                </Text>
+              )}
+            </YStack>
+          </>
+        ) : null}
+      </YStack>
 
       <ScrollView flex={1} contentContainerStyle={{ paddingBottom: 140 }}>
         {/* ヒーロー写真（左下にピン絵文字バッジを重ねる） */}
