@@ -18,6 +18,15 @@ export default function PostDetailScreen() {
   const [saving, setSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // 直接URLでこの画面を開いた場合など、戻る先の履歴が無いケースのフォールバック
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/home');
+    }
+  };
+
   useEffect(() => {
     if (!postId) return;
     getPostById(postId).then((result) => {
@@ -39,7 +48,7 @@ export default function PostDetailScreen() {
     setMenuOpen(false);
     if (!window.confirm('この投稿を削除しますか？')) return;
     await deletePost(post.id);
-    router.back();
+    goBack();
   };
 
   if (post === undefined) {
@@ -53,7 +62,7 @@ export default function PostDetailScreen() {
   if (post === null) {
     return (
       <YStack flex={1} backgroundColor="#000">
-        <MiniHeader onBack={() => router.back()} />
+        <MiniHeader onBack={goBack} />
         <YStack flex={1} justifyContent="center" alignItems="center">
           <Text color="#555" fontSize={14}>
             投稿が見つかりませんでした
@@ -67,7 +76,7 @@ export default function PostDetailScreen() {
     <YStack flex={1} backgroundColor="#000">
       <YStack position="relative">
         <MiniHeader
-          onBack={() => router.back()}
+          onBack={goBack}
           rightAction={
             <Pressable onPress={() => setMenuOpen((prev) => !prev)} hitSlop={12} accessibilityRole="button" accessibilityLabel="メニュー">
               <Text fontSize={22} color="#fff">
