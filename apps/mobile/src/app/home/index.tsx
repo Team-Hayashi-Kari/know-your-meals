@@ -56,21 +56,8 @@ export default function HomeScreen() {
   };
 
   return (
-    <YStack flex={1} backgroundColor="#000" justifyContent="center" alignItems="center" gap="$4">
-      <Text color="#fff" fontSize={24} fontWeight="700">
-        ホーム
-      </Text>
-      <Text color="#ffd400" fontSize={14} fontWeight="700" onPress={() => router.push('/profile-edit')}>
-        プロフィール編集
-      </Text>
-      <Text color="#555" fontSize={14}>
-        {session?.user?.email ?? ''}
-      </Text>
-      <Text color="#444" fontSize={13} fontWeight="600" onPress={handleLogout} marginTop="$4">
-        ログアウト
-      </Text>
     <YStack flex={1} backgroundColor="#000">
-      <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} userInitial={userInitial} />
+      <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} userInitial={userInitial} onPressProfile={() => router.push('/profile-edit')} />
 
       <YStack paddingBottom="$3">
         <CategoryFilterChips selected={selectedCategory} onChange={setSelectedCategory} />
