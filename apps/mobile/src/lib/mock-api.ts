@@ -17,7 +17,7 @@ export type UserSearchResult = {
   name: string;
   handle: string;
   image: string | null;
-  friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'friends';
+  friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'friends' | 'request_denied';
 };
 
 // ---- 仮データ（本物のDBの代わり） ----

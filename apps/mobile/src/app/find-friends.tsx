@@ -149,6 +149,10 @@ function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: (
         <Text color="#555" fontSize={13} fontWeight="600">
           申請中
         </Text>
+      ) : status === 'request_denied' ? (
+        <Text color="#555" fontSize={13} fontWeight="600">
+          申請済み
+        </Text>
       ) : (
         <Button onPress={handleSend} disabled={sending} backgroundColor="#1a1a1a" borderRadius="$4" height={36} paddingHorizontal="$4">
           <Text color="#ffd400" fontSize={13} fontWeight="700">

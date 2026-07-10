@@ -8,11 +8,12 @@ import type { Env } from '../types';
 const LIMIT_DEFAULT = 20;
 const LIMIT_MAX = 50;
 
-type FriendshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'friends';
+type FriendshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'friends' | 'request_denied';
 
 function toFriendshipStatus(status: string | null, requesterId: string | null, currentUserId: string): FriendshipStatus {
   if (status === 'accepted') return 'friends';
   if (status === 'pending') return requesterId === currentUserId ? 'pending_sent' : 'pending_received';
+  if (status === 'denied' && requesterId === currentUserId) return 'request_denied';
   return 'none';
 }
 
