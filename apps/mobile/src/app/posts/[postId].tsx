@@ -5,6 +5,7 @@ import { ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
 import { Avatar } from '../../components/post-flow/Avatar';
 import { MiniHeader } from '../../components/post-flow/MiniHeader';
 import { PhotoSlot } from '../../components/post-flow/PhotoSlot';
+import { PinBadge } from '../../components/post-flow/PinBadge';
 import { PrimaryButton } from '../../components/post-flow/PrimaryButton';
 import { SecondaryButton } from '../../components/post-flow/SecondaryButton';
 import { deletePost, getPostById, toggleBookmark, type NearbyPost } from '../../lib/mock-api';
@@ -87,9 +88,12 @@ export default function PostDetailScreen() {
       />
 
       <ScrollView flex={1} contentContainerStyle={{ paddingBottom: 140 }}>
-        {/* ヒーロー写真 */}
-        <YStack paddingHorizontal="$5" marginBottom="$4">
+        {/* ヒーロー写真（左下にピン絵文字バッジを重ねる） */}
+        <YStack paddingHorizontal="$5" marginBottom="$4" position="relative">
           <PhotoSlot uri={post.imageUri} height={280} borderRadius={16} label="写真なし" />
+          <YStack position="absolute" bottom={12} left={32}>
+            <PinBadge emoji={post.genreEmoji} size={44} />
+          </YStack>
         </YStack>
 
         <YStack paddingHorizontal="$5" gap="$4">
