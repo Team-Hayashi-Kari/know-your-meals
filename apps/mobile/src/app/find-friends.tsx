@@ -1,96 +1,123 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Button, Input, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
-import { searchUsers, sendFriendRequest, type UserSearchResult } from '../lib/mock-api';
+import { getSuggestedUsers, searchUsers, sendFriendRequest, type UserSearchResult } from '../lib/mock-api';
 
 export default function FindFriendsScreen() {
   const router = useRouter();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserSearchResult[]>([]);
+  const [suggested, setSuggested] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  // 1人でも申請したかどうか
+  const [hasRequested, setHasRequested] = useState(false);
 
+  // 画面を開いた瞬間におすすめフレンドを取得
   useEffect(() => {
-    if (!query) {
+    getSuggestedUsers().then((users) => setSuggested(users));
+  }, []);
+
+  // 検索欄が変わるたびに検索
+  useEffect(() => {
+    if (!query.trim()) {
       setResults([]);
+      setLoading(false);
       return;
     }
     setLoading(true);
-    searchUsers(query).then((users) => {
-      setResults(users);
-      setLoading(false);
-    });
+    const timer = setTimeout(() => {
+      searchUsers(query).then((users) => {
+        setResults(users);
+        setLoading(false);
+      });
+    }, 300);
+    return () => clearTimeout(timer);
   }, [query]);
 
+  const isSearching = query.trim() !== '';
+
   return (
-    <YStack flex={1} backgroundColor="#000">
-      {/* スクロールする中身（ボタンの高さぶん下に余白をあける） */}
-      <ScrollView
-        flex={1}
-        contentContainerStyle={{
-          paddingHorizontal: 24,
-          paddingTop: 64,
-          paddingBottom: 120,
-        }}
-      >
-        {/* 上部：ステップ表示 と スキップ */}
-        <XStack justifyContent="space-between" alignItems="center" marginBottom="$6">
-          <Text color="#555" fontSize={13} fontWeight="600">
-            ステップ 2 / 2
-          </Text>
-          <Text color="#555" fontSize={13} fontWeight="600" onPress={() => router.replace('/home')}>
-            スキップ
-          </Text>
-        </XStack>
-
-        {/* 見出し */}
-        <Text color="#fff" fontSize={32} fontWeight="800" lineHeight={38} marginBottom="$2">
-          フレンドを{'\n'}見つけよう
+    <ScrollView
+      flex={1}
+      backgroundColor="#000"
+      contentContainerStyle={{
+        flexGrow: 1,
+        paddingHorizontal: 24,
+        paddingTop: 64,
+        paddingBottom: 32,
+      }}
+    >
+      <XStack marginBottom="$6">
+        <Text color="#555" fontSize={13} fontWeight="600">
+          ステップ 2 / 2
         </Text>
-        <Text color="#555" fontSize={14} marginBottom="$5">
-          IDや名前で検索してフレンド申請。
+      </XStack>
+
+      <Text color="#fff" fontSize={32} fontWeight="800" lineHeight={38} marginBottom="$2">
+        フレンドを{'\n'}見つけよう
+      </Text>
+      <Text color="#555" fontSize={14} marginBottom="$5">
+        IDや名前で検索してフレンド申請。
+      </Text>
+
+      <Input
+        value={query}
+        onChangeText={setQuery}
+        placeholder="IDまたは名前で検索"
+        placeholderTextColor="$gray9"
+        backgroundColor="#1a1a1a"
+        borderWidth={0}
+        color="#fff"
+        height={52}
+        fontSize={16}
+        borderRadius="$4"
+        autoCapitalize="none"
+        marginBottom="$4"
+      />
+
+      {/* 検索中の見出し or おすすめの見出し */}
+      {!isSearching && suggested.length > 0 && (
+        <Text color="#888" fontSize={13} fontWeight="600" marginBottom="$3">
+          おすすめのフレンド
         </Text>
+      )}
 
-        {/* 検索欄 */}
-        <Input
-          value={query}
-          onChangeText={setQuery}
-          placeholder="IDまたは名前で検索"
-          placeholderTextColor="$gray9"
-          backgroundColor="#1a1a1a"
-          borderWidth={0}
-          color="#fff"
-          height={52}
-          fontSize={16}
-          borderRadius="$4"
-          autoCapitalize="none"
-          marginBottom="$4"
-        />
-
-        {/* 検索結果 */}
-        <YStack gap="$3">{loading ? <Spinner color="#555" marginTop="$4" /> : results.map((user) => <UserRow key={user.id} user={user} />)}</YStack>
-      </ScrollView>
-
-      {/* 画面の底に固定する「はじめる」ボタン */}
-      <YStack position="absolute" bottom={0} left={0} right={0} backgroundColor="#000" paddingHorizontal="$6" paddingBottom="$8" paddingTop="$3">
-        <Button
-          onPress={() => router.replace('/home')}
-          backgroundColor="#fff"
-          pressStyle={{ backgroundColor: '#e8e8e8', scale: 0.97 }}
-          borderRadius="$5"
-          height={60}
-        >
-          <Text color="#000" fontWeight="700" fontSize={16}>
-            はじめる
-          </Text>
-        </Button>
+      <YStack gap="$3">
+        {loading ? (
+          <Spinner color="#555" marginTop="$4" />
+        ) : isSearching ? (
+          // 検索中
+          results.length > 0 ? (
+            results.map((user) => <UserRow key={user.id} user={user} onRequested={() => setHasRequested(true)} />)
+          ) : (
+            <Text color="#888" fontSize={14} marginTop="$2">
+              「{query.trim()}」の検索結果はありません
+            </Text>
+          )
+        ) : (
+          // 検索していないときはおすすめを表示
+          suggested.map((user) => <UserRow key={user.id} user={user} onRequested={() => setHasRequested(true)} />)
+        )}
       </YStack>
-    </YStack>
+
+      <Button
+        onPress={() => router.replace('/home')}
+        backgroundColor="#fff"
+        pressStyle={{ backgroundColor: '#e8e8e8', scale: 0.97 }}
+        borderRadius="$5"
+        height={60}
+        marginTop="$6"
+      >
+        <Text color="#000" fontWeight="700" fontSize={16}>
+          {hasRequested ? 'はじめる' : 'スキップしてはじめる'}
+        </Text>
+      </Button>
+    </ScrollView>
   );
 }
 
-// ===== ユーザー1人分の行 =====
-function UserRow({ user }: { user: UserSearchResult }) {
+function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: () => void }) {
   const [status, setStatus] = useState(user.relationshipStatus);
   const [sending, setSending] = useState(false);
 
@@ -99,6 +126,7 @@ function UserRow({ user }: { user: UserSearchResult }) {
     await sendFriendRequest(user.id);
     setStatus('pending_sent');
     setSending(false);
+    onRequested();
   };
 
   return (
@@ -108,7 +136,6 @@ function UserRow({ user }: { user: UserSearchResult }) {
           {getInitial(user.name)}
         </Text>
       </YStack>
-
       <YStack flex={1}>
         <Text color="#fff" fontSize={15} fontWeight="600">
           {user.name}
@@ -117,7 +144,6 @@ function UserRow({ user }: { user: UserSearchResult }) {
           @{user.handle}
         </Text>
       </YStack>
-
       {status === 'pending_sent' ? (
         <Text color="#555" fontSize={13} fontWeight="600">
           申請中
@@ -133,7 +159,6 @@ function UserRow({ user }: { user: UserSearchResult }) {
   );
 }
 
-// ===== 道具（関数） =====
 function getInitial(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) return '?';

@@ -17,35 +17,27 @@ export default function ProfileSetupScreen() {
   const [saving, setSaving] = useState(false);
   const [image, setImage] = useState<string | null>(null);
 
-  // ID重複チェックの状態
-  // 'idle'（未入力）/ 'checking'（確認中）/ 'available'（使える）/ 'taken'（使われている）
   const [handleStatus, setHandleStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
 
-  // 「次へ」を押したあとのエラー表示用
   const [nameError, setNameError] = useState('');
   const [handleError, setHandleError] = useState('');
 
-  // リアルタイムの文字数
   const nameCount = countChars(name.trim());
   const handleCount = countChars(handle.trim());
 
-  // handle が変わるたびに、少し待ってから空き状況をチェック
   useEffect(() => {
     const trimmed = handle.trim();
-    // 文字を打ち直したらエラー表示は一旦消す
     setHandleError('');
 
     if (!trimmed) {
       setHandleStatus('idle');
       return;
     }
-    // 使えない文字・文字数オーバーなら重複チェックはしない
     if (!isHandleFormatValid(trimmed) || countChars(trimmed) > HANDLE_MAX) {
       setHandleStatus('idle');
       return;
     }
     setHandleStatus('checking');
-    // 入力が止まってから300ミリ秒後にチェック（打つたびに連発しないように）
     const timer = setTimeout(() => {
       checkHandleAvailable(trimmed).then((ok) => {
         setHandleStatus(ok ? 'available' : 'taken');
@@ -68,7 +60,6 @@ export default function ProfileSetupScreen() {
   };
 
   const handleNext = async () => {
-    // まずエラーをリセット
     setNameError('');
     setHandleError('');
 
@@ -76,7 +67,6 @@ export default function ProfileSetupScreen() {
     const trimmedHandle = handle.trim();
     let hasError = false;
 
-    // 名前チェック
     if (!trimmedName) {
       setNameError('名前を入力してください');
       hasError = true;
@@ -85,7 +75,6 @@ export default function ProfileSetupScreen() {
       hasError = true;
     }
 
-    // IDチェック
     if (!trimmedHandle) {
       setHandleError('ユーザーIDを入力してください');
       hasError = true;
@@ -107,7 +96,6 @@ export default function ProfileSetupScreen() {
 
     setSaving(true);
     try {
-      // 保存時は @ を付けずに素のIDを渡す
       await updateMe({ name: trimmedName, handle: trimmedHandle, bio, image });
       router.replace('/find-friends');
     } catch (e) {
@@ -127,12 +115,9 @@ export default function ProfileSetupScreen() {
         paddingBottom: 32,
       }}
     >
-      <XStack justifyContent="space-between" alignItems="center" marginBottom="$6">
+      <XStack marginBottom="$6">
         <Text color="#555" fontSize={13} fontWeight="600">
           ステップ 1 / 2
-        </Text>
-        <Text color="#555" fontSize={13} fontWeight="600" onPress={() => router.replace('/home')}>
-          スキップ
         </Text>
       </XStack>
 
@@ -217,7 +202,6 @@ export default function ProfileSetupScreen() {
             {handleCount}/{HANDLE_MAX}
           </Text>
         </XStack>
-        {/* @ を左に固定し、ユーザーは @ を除いた部分だけ入力 */}
         <XStack alignItems="center" backgroundColor="#1a1a1a" borderRadius="$4" height={52} paddingLeft="$3">
           <Text color="#888" fontSize={16} fontWeight="600">
             @
@@ -236,7 +220,6 @@ export default function ProfileSetupScreen() {
             autoCapitalize="none"
           />
         </XStack>
-        {/* ID重複チェックの表示 */}
         {handleStatus === 'checking' && (
           <Text color="#888" fontSize={13}>
             確認中…
@@ -252,7 +235,6 @@ export default function ProfileSetupScreen() {
             ✗ このIDは使われています
           </Text>
         )}
-        {/* 次へを押したときのエラー（形式NG・文字数オーバーなど） */}
         {handleError !== '' && (
           <Text color="#ff4444" fontSize={13}>
             {handleError}
@@ -302,12 +284,10 @@ export default function ProfileSetupScreen() {
   );
 }
 
-// 見た目どおりに文字数を数える（絵文字を1文字として数える）
 function countChars(str: string): number {
   return [...str].length;
 }
 
-// IDに使える文字かどうか（半角英数字・アンダースコア・ドットのみ）
 function isHandleFormatValid(h: string): boolean {
   return /^[a-zA-Z0-9_.]+$/.test(h);
 }
