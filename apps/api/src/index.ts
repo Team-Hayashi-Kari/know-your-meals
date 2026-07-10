@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { createAuth } from './lib/auth';
+import { defaultAvatarRoute } from './routes/default-avatar';
 import { friendshipsRoute } from './routes/friendships';
 import { imagesRoute } from './routes/images';
 import { me } from './routes/me';
@@ -27,6 +28,7 @@ const app = new Hono<Env>()
   .use('/api/friendships/*', apiCors)
   .use('/api/images/*', apiCors)
   .use('/api/users/*', apiCors)
+  .use('/api/default-avatar', apiCors)
   .on(['GET', 'POST'], '/api/auth/*', (c) => {
     return createAuth(c.env).handler(c.req.raw);
   })
@@ -36,7 +38,8 @@ const app = new Hono<Env>()
   .route('/api/friendships', friendshipsRoute)
   .route('/api/posts', postsRoute)
   .route('/api/images', imagesRoute)
-  .route('/api/users', usersRoute);
+  .route('/api/users', usersRoute)
+  .route('/api/default-avatar', defaultAvatarRoute);
 
 export type AppType = typeof app;
 export default app;
