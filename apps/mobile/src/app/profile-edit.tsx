@@ -124,15 +124,7 @@ export default function ProfileEditScreen() {
         <Text color="#fff" fontSize={18} fontWeight="800">
           プロフィール編集
         </Text>
-        <Button
-          chromeless
-          padding={0}
-          minHeight={0}
-          height="auto"
-          onPress={handleSave}
-          disabled={saving}
-          disabledStyle={{ opacity: 0.5 }}
-        >
+        <Button chromeless padding={0} minHeight={0} height="auto" onPress={handleSave} disabled={saving} disabledStyle={{ opacity: 0.5 }}>
           {saving ? (
             <Spinner color="#ffd400" size="small" />
           ) : (
