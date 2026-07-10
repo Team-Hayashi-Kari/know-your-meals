@@ -3,6 +3,12 @@ name: Claude Auto Review
 on:
   pull_request:
     types: [opened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: string
 
 jobs:
   claude-auto-review:
@@ -26,4 +32,6 @@ jobs:
           additional_permissions: |
             actions: read
           use_sticky_comment: true
+          show_full_output: true
+          claude_args: '--allowedTools "Bash(gh pr *),Bash(gh api *),Read,Glob,Grep"'
           prompt: 'このPRのコードをレビューしてください。変更内容の概要、潜在的な問題点、改善提案をまとめてください。'
