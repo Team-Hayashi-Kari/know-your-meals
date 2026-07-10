@@ -4,6 +4,8 @@
 // バックエンドが完成したら、この中の実装だけを本物の fetch() 呼び出しに差し替えます。
 // 関数名・引数・戻り値の型は API設計書（GET/PATCH /api/me など）に合わせてあります。
 
+import { authClient } from './auth-client';
+
 export type MeProfile = {
   id: string;
   name: string;
@@ -43,7 +45,6 @@ const mockUsers: UserSearchResult[] = [
   { id: 'u3', name: 'Aoi', handle: 'aoi_gohan', image: null, relationshipStatus: 'none' },
   { id: 'u4', name: 'Takumi', handle: 'tkm.eats', image: null, relationshipStatus: 'none' },
 ];
-const mockFriendIds = new Set(['u2', 'u3']);
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -78,18 +79,18 @@ export async function getSuggestedUsers(): Promise<UserSearchResult[]> {
   return mockUsers.filter((u) => u.relationshipStatus === 'none');
 }
 
-// GET /api/me/friends 相当
+// GET /api/me/friends
 export async function getFriends(): Promise<FriendUser[]> {
-  await delay(300);
-  return mockUsers
-    .filter((u) => mockFriendIds.has(u.id))
-    .map((u) => ({
-      id: u.id,
-      name: u.name,
-      handle: u.handle,
-      image: u.image,
-      bio: null,
-    }));
+  // ネイティブではcookieが自動送信されないため authClient.getCookie() で手動付与する
+  // (better-auth expoクライアントの標準パターン)
+  const cookie = authClient.getCookie();
+  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/me/friends`, {
+    credentials: 'include',
+    headers: cookie ? { Cookie: cookie } : undefined,
+  });
+  if (res.status === 401) throw new Error('Unauthorized');
+  if (!res.ok) throw new Error(`Failed to fetch friends (${res.status})`);
+  return res.json();
 }
 
 // GET /api/users/check-handle?handle= 相当

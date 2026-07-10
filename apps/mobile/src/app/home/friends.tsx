@@ -9,10 +9,12 @@ export default function FriendsScreen() {
   const [query, setQuery] = useState('');
   const [friends, setFriends] = useState<FriendUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getFriends()
       .then((users) => setFriends(users))
+      .catch(() => setError('フレンド一覧の取得に失敗しました'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -61,6 +63,10 @@ export default function FriendsScreen() {
       <YStack gap="$3">
         {loading ? (
           <Spinner color="#555" marginTop="$4" />
+        ) : error ? (
+          <Text color="#888" fontSize={14} marginTop="$2">
+            {error}
+          </Text>
         ) : filteredFriends.length > 0 ? (
           filteredFriends.map((friend) => (
             <Button
