@@ -4,7 +4,8 @@ import { Button, Input, Spinner, Text, TextArea, XStack, YStack } from 'tamagui'
 import { checkHandleAvailable, getMe, updateMe } from '../lib/mock-api';
 
 const NAME_MAX = 20;
-const HANDLE_MAX = 15;
+const HANDLE_MIN = 3;
+const HANDLE_MAX = 30;
 
 export default function ProfileEditScreen() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function ProfileEditScreen() {
     getMe().then((me) => {
       setName(me.name);
       setHandle(me.handle ?? '');
-      setInitialHandle((me.handle ?? '').trim().toLowerCase());
+      setInitialHandle((me.handle ?? '').trim());
       setBio(me.bio ?? '');
       setLoading(false);
     });
@@ -33,14 +34,13 @@ export default function ProfileEditScreen() {
 
   useEffect(() => {
     const trimmed = handle.trim();
-    const normalized = trimmed.toLowerCase();
     setHandleError('');
 
-    if (!trimmed || normalized === initialHandle) {
+    if (!trimmed || trimmed === initialHandle) {
       setHandleStatus('idle');
       return;
     }
-    if (!isHandleFormatValid(trimmed) || countChars(trimmed) > HANDLE_MAX) {
+    if (!isHandleFormatValid(trimmed) || countChars(trimmed) < HANDLE_MIN || countChars(trimmed) > HANDLE_MAX) {
       setHandleStatus('idle');
       return;
     }
@@ -67,7 +67,6 @@ export default function ProfileEditScreen() {
 
     const trimmedName = name.trim();
     const trimmedHandle = handle.trim();
-    const normalizedHandle = trimmedHandle.toLowerCase();
     let hasError = false;
 
     if (!trimmedName) {
@@ -82,15 +81,18 @@ export default function ProfileEditScreen() {
       setHandleError('ユーザーIDを入力してください');
       hasError = true;
     } else if (!isHandleFormatValid(trimmedHandle)) {
-      setHandleError('IDは半角の英数字・記号（_ .）のみ使えます');
+      setHandleError('IDは半角の英数字・_のみ使えます');
+      hasError = true;
+    } else if (countChars(trimmedHandle) < HANDLE_MIN) {
+      setHandleError(`IDは${HANDLE_MIN}文字以上で入力してください`);
       hasError = true;
     } else if (countChars(trimmedHandle) > HANDLE_MAX) {
       setHandleError(`IDは${HANDLE_MAX}文字以内で入力してください`);
       hasError = true;
-    } else if (normalizedHandle !== initialHandle && handleStatus === 'taken') {
+    } else if (trimmedHandle !== initialHandle && handleStatus === 'taken') {
       setHandleError('このIDは使われています');
       hasError = true;
-    } else if (normalizedHandle !== initialHandle && handleStatus === 'checking') {
+    } else if (trimmedHandle !== initialHandle && handleStatus === 'checking') {
       setHandleError('ID確認中です。少し待ってください');
       hasError = true;
     }
