@@ -103,6 +103,8 @@ export type NearbyPost = {
   distanceMeters: number; // 現在地からの距離。本物は現在地×店舗座標から算出するためプレースホルダー（[[post-detail-distance-needs-task1-coordination]]参照）
   isBookmarked: boolean; // 本物のAPI（GET /api/posts/:id、PR #111）では bookmarks への LEFT JOIN で判定
   isMine: boolean; // 自分の投稿かどうか。本物は posts.userId === 自分のuserId で判定
+  lat: number; // 店舗の緯度。マップ画面(FE-8)のピン表示に使用
+  lng: number; // 店舗の経度。マップ画面(FE-8)のピン表示に使用
 };
 
 const mockNearbyPosts: NearbyPost[] = [
@@ -120,6 +122,8 @@ const mockNearbyPosts: NearbyPost[] = [
     distanceMeters: 320,
     isBookmarked: false,
     isMine: false,
+    lat: 35.662,
+    lng: 139.7038,
   },
   {
     id: 'p2',
@@ -135,6 +139,8 @@ const mockNearbyPosts: NearbyPost[] = [
     distanceMeters: 540,
     isBookmarked: false,
     isMine: false,
+    lat: 35.657,
+    lng: 139.698,
   },
   {
     id: 'p3',
@@ -150,6 +156,8 @@ const mockNearbyPosts: NearbyPost[] = [
     distanceMeters: 810,
     isBookmarked: false,
     isMine: false,
+    lat: 35.664,
+    lng: 139.705,
   },
   {
     id: 'p4',
@@ -165,6 +173,8 @@ const mockNearbyPosts: NearbyPost[] = [
     distanceMeters: 150,
     isBookmarked: false,
     isMine: true,
+    lat: 35.66,
+    lng: 139.699,
   },
   {
     id: 'p5',
@@ -180,6 +190,8 @@ const mockNearbyPosts: NearbyPost[] = [
     distanceMeters: 970,
     isBookmarked: false,
     isMine: false,
+    lat: 35.656,
+    lng: 139.704,
   },
   {
     id: 'p6',
@@ -195,6 +207,8 @@ const mockNearbyPosts: NearbyPost[] = [
     distanceMeters: 1200,
     isBookmarked: false,
     isMine: false,
+    lat: 35.666,
+    lng: 139.696,
   },
   {
     id: 'p7',
@@ -210,6 +224,8 @@ const mockNearbyPosts: NearbyPost[] = [
     distanceMeters: 430,
     isBookmarked: false,
     isMine: false,
+    lat: 35.658,
+    lng: 139.707,
   },
   {
     id: 'p8',
@@ -225,6 +241,8 @@ const mockNearbyPosts: NearbyPost[] = [
     distanceMeters: 260,
     isBookmarked: false,
     isMine: false,
+    lat: 35.661,
+    lng: 139.695,
   },
   {
     id: 'p9',
@@ -240,6 +258,8 @@ const mockNearbyPosts: NearbyPost[] = [
     distanceMeters: 690,
     isBookmarked: false,
     isMine: false,
+    lat: 35.655,
+    lng: 139.701,
   },
   {
     id: 'p10',
@@ -255,6 +275,8 @@ const mockNearbyPosts: NearbyPost[] = [
     distanceMeters: 1050,
     isBookmarked: false,
     isMine: false,
+    lat: 35.665,
+    lng: 139.7,
   },
   // 自分プロフィールのアルバム表示デモ用（FE-14）
   {
@@ -337,6 +359,8 @@ export async function createPost(draft: { storeId: string; comment: string; pin:
     distanceMeters: 0,
     isBookmarked: false,
     isMine: true,
+    lat: 35.6595,
+    lng: 139.7005,
   };
   mockNearbyPosts.unshift(newPost);
   return newPost;
