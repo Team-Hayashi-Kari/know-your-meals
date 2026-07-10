@@ -5,6 +5,7 @@
 // Web は credentials:'include' でブラウザのCookieが自動送信されるが、
 // Native (iOS/Android) の fetch にはCookie jarが無いため、
 // expoClient が SecureStore に保存した Cookie を authClient.getCookie() で明示的に付与する。
+import { Platform } from 'react-native';
 import { authClient } from './auth-client';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -22,11 +23,11 @@ async function apiFetch<T>(path: string): Promise<T> {
     throw new Error('EXPO_PUBLIC_API_URL is not set');
   }
 
+  const cookie = Platform.OS === 'web' ? '' : authClient.getCookie();
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
     credentials: 'include',
-    headers: {
-      cookie: authClient.getCookie(),
-    },
+    headers: cookie ? { cookie } : undefined,
   });
 
   if (!res.ok) {
