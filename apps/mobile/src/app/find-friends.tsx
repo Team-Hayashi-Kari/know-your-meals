@@ -119,7 +119,7 @@ export default function FindFriendsScreen() {
 }
 
 function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: () => void }) {
-  const [status, setStatus] = useState(user.relationshipStatus);
+  const [status, setStatus] = useState(user.friendshipStatus);
   const [sending, setSending] = useState(false);
 
   const handleSend = async () => {

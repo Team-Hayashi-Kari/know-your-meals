@@ -1,8 +1,8 @@
 // apps/mobile/src/lib/mock-api.ts
 //
-// 🔧 これはモック（仮の）APIです。
-// バックエンドが完成したら、この中の実装だけを本物の fetch() 呼び出しに差し替えます。
-// 関数名・引数・戻り値の型は API設計書（GET/PATCH /api/me など）に合わせてあります。
+// 🔧 モックAPIです。バックエンド未実装の機能はここに残し、実装済みのものは本物の fetch() に差し替えます。
+
+import { apiFetch } from './api';
 
 export type MeProfile = {
   id: string;
@@ -17,7 +17,7 @@ export type UserSearchResult = {
   name: string;
   handle: string;
   image: string | null;
-  relationshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'friends';
+  friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'friends';
 };
 
 // ---- 仮データ（本物のDBの代わり） ----
@@ -28,13 +28,6 @@ let mockMe: MeProfile = {
   bio: null,
   image: null,
 };
-
-const mockUsers: UserSearchResult[] = [
-  { id: 'u1', name: 'Yuki Tanaka', handle: 'yuki_eats', image: null, relationshipStatus: 'pending_sent' },
-  { id: 'u2', name: 'Ryo Sato', handle: 'ryo.food', image: null, relationshipStatus: 'none' },
-  { id: 'u3', name: 'Aoi', handle: 'aoi_gohan', image: null, relationshipStatus: 'none' },
-  { id: 'u4', name: 'Takumi', handle: 'tkm.eats', image: null, relationshipStatus: 'none' },
-];
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -54,36 +47,41 @@ export async function updateMe(data: Partial<Pick<MeProfile, 'name' | 'handle' |
   return mockMe;
 }
 
-// GET /api/users/search?q= 相当
+type ApiSearchUser = {
+  id: string;
+  name: string;
+  handle: string | null;
+  image: string | null;
+  friendshipStatus: UserSearchResult['friendshipStatus'];
+};
+
+// GET /api/users/search?q=
 export async function searchUsers(query: string): Promise<UserSearchResult[]> {
-  await delay(300);
-  if (!query) return [];
-  const q = query.toLowerCase().replace('@', '');
-  return mockUsers.filter((u) => u.handle.includes(q) || u.name.toLowerCase().includes(q));
+  if (!query.trim()) return [];
+  const res = await apiFetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+  const data = (await res.json()) as { users: ApiSearchUser[] };
+  return (data.users ?? []).map((u) => ({ ...u, handle: u.handle ?? '' }));
 }
 
-// GET /api/users/suggestions 相当（おすすめフレンド）
+// バックエンドにエンドポイントなし → 空配列（検索ファーストUX）
 export async function getSuggestedUsers(): Promise<UserSearchResult[]> {
-  await delay(300);
-  // まだフレンドでない人をおすすめとして返す
-  return mockUsers.filter((u) => u.relationshipStatus === 'none');
+  return [];
 }
 
-// GET /api/users/check-handle?handle= 相当
-// そのIDが使えるか（他の人に使われていないか）を返す
+// GET /api/users/check-handle?handle= 相当（未実装のためモック継続）
 export async function checkHandleAvailable(handle: string): Promise<boolean> {
   await delay(300);
-  const h = handle.toLowerCase().replace('@', '');
-  // 既存ユーザーの handle と一致したら「使われている（false）」
-  const taken = mockUsers.some((u) => u.handle.toLowerCase() === h);
-  return !taken;
+  void handle;
+  return true;
 }
 
-// POST /api/friendships 相当
+// POST /api/friendships
 export async function sendFriendRequest(userId: string): Promise<void> {
-  await delay(300);
-  const target = mockUsers.find((u) => u.id === userId);
-  if (target) target.relationshipStatus = 'pending_sent';
+  await apiFetch('/api/friendships', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: userId }),
+  });
 }
 
 // pinEmojiEnum (packages/db/src/schema/content.ts) と揃える
