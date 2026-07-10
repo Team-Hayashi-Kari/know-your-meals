@@ -20,6 +20,14 @@ export type UserSearchResult = {
   relationshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'friends';
 };
 
+export type FriendUser = {
+  id: string;
+  name: string;
+  handle: string | null;
+  image: string | null;
+  bio: string | null;
+};
+
 // ---- 仮データ（本物のDBの代わり） ----
 let mockMe: MeProfile = {
   id: 'mock-user-1',
@@ -35,6 +43,7 @@ const mockUsers: UserSearchResult[] = [
   { id: 'u3', name: 'Aoi', handle: 'aoi_gohan', image: null, relationshipStatus: 'none' },
   { id: 'u4', name: 'Takumi', handle: 'tkm.eats', image: null, relationshipStatus: 'none' },
 ];
+const mockFriendIds = new Set(['u2', 'u3']);
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -67,6 +76,20 @@ export async function getSuggestedUsers(): Promise<UserSearchResult[]> {
   await delay(300);
   // まだフレンドでない人をおすすめとして返す
   return mockUsers.filter((u) => u.relationshipStatus === 'none');
+}
+
+// GET /api/me/friends 相当
+export async function getFriends(): Promise<FriendUser[]> {
+  await delay(300);
+  return mockUsers
+    .filter((u) => mockFriendIds.has(u.id))
+    .map((u) => ({
+      id: u.id,
+      name: u.name,
+      handle: u.handle,
+      image: u.image,
+      bio: null,
+    }));
 }
 
 // GET /api/users/check-handle?handle= 相当

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Spinner, Text, YStack } from 'tamagui';
+import { Button, Spinner, Text, YStack } from 'tamagui';
 import { authClient } from '../../lib/auth-client';
 
 export default function HomeScreen() {
@@ -27,6 +27,11 @@ export default function HomeScreen() {
       <Text color="#555" fontSize={14}>
         {session?.user?.email ?? ''}
       </Text>
+      <Button onPress={() => router.push('/home/friends')} backgroundColor="#1a1a1a" borderRadius="$4" paddingHorizontal="$4">
+        <Text color="#fff" fontSize={14} fontWeight="600">
+          フレンド一覧
+        </Text>
+      </Button>
       <Text color="#444" fontSize={13} fontWeight="600" onPress={handleLogout} marginTop="$4">
         ログアウト
       </Text>
