@@ -2,7 +2,7 @@ import { getAvatarColor, getAvatarInitial } from '@repo/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Input, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
-import { getFriends, type FriendUser } from '../../lib/mock-api';
+import { type FriendUser, getFriends } from '../../lib/mock-api';
 
 export default function FriendsScreen() {
   const router = useRouter();
@@ -76,7 +76,14 @@ export default function FriendsScreen() {
               pressStyle={{ opacity: 0.8 }}
             >
               <XStack alignItems="center" gap="$3">
-                <YStack width={44} height={44} borderRadius={22} backgroundColor={getAvatarColor(friend.name)} justifyContent="center" alignItems="center">
+                <YStack
+                  width={44}
+                  height={44}
+                  borderRadius={22}
+                  backgroundColor={getAvatarColor(friend.name)}
+                  justifyContent="center"
+                  alignItems="center"
+                >
                   <Text color="#fff" fontSize={18} fontWeight="700">
                     {getAvatarInitial(friend.name)}
                   </Text>

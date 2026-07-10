@@ -1,8 +1,6 @@
 import { useRouter } from 'expo-router';
-import { Button, Spinner, Text, YStack } from 'tamagui';
-import { authClient } from '../../lib/auth-client';
 import { useEffect, useMemo, useState } from 'react';
-import { YStack } from 'tamagui';
+import { Button, Text, YStack } from 'tamagui';
 import { CategoryFilterChips } from '../../components/map/CategoryFilterChips';
 import { GoogleMapView } from '../../components/map/GoogleMapView';
 import { MapSearchBar } from '../../components/map/MapSearchBar';
@@ -58,26 +56,16 @@ export default function HomeScreen() {
   };
 
   return (
-    <YStack flex={1} backgroundColor="#000" justifyContent="center" alignItems="center" gap="$4">
-      <Text color="#fff" fontSize={24} fontWeight="700">
-        ホーム
-      </Text>
-      <Text color="#555" fontSize={14}>
-        {session?.user?.email ?? ''}
-      </Text>
-      <Button onPress={() => router.push('/home/friends')} backgroundColor="#1a1a1a" borderRadius="$4" paddingHorizontal="$4">
-        <Text color="#fff" fontSize={14} fontWeight="600">
-          フレンド一覧
-        </Text>
-      </Button>
-      <Text color="#444" fontSize={13} fontWeight="600" onPress={handleLogout} marginTop="$4">
-        ログアウト
-      </Text>
     <YStack flex={1} backgroundColor="#000">
       <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} userInitial={userInitial} />
 
       <YStack paddingBottom="$3">
         <CategoryFilterChips selected={selectedCategory} onChange={setSelectedCategory} />
+        <Button onPress={() => router.push('/home/friends')} backgroundColor="#1a1a1a" borderRadius="$4" marginHorizontal="$4" marginTop="$3">
+          <Text color="#fff" fontSize={14} fontWeight="600">
+            フレンド一覧
+          </Text>
+        </Button>
       </YStack>
 
       <YStack flex={1} position="relative">
