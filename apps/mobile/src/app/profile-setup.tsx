@@ -4,9 +4,8 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image as RNImage } from 'react-native';
 import { Button, Input, ScrollView, Spinner, Text, TextArea, XStack, YStack } from 'tamagui';
-import { getMe, updateMe } from '../lib/api';
+import { checkHandleAvailable, getMe, updateMe } from '../lib/api';
 import { ApiError } from '../lib/api-client';
-import { checkHandleAvailable } from '../lib/mock-api';
 
 const NAME_MAX = 20;
 const HANDLE_MIN = 3;
