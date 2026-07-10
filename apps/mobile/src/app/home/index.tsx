@@ -11,7 +11,9 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      getReceivedFriendRequests().then((requests) => setReceivedCount(requests.length));
+      getReceivedFriendRequests()
+        .then((requests) => setReceivedCount(requests.length))
+        .catch(() => setReceivedCount(0));
     }, []),
   );
 

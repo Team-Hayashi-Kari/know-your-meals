@@ -4,6 +4,28 @@
 // バックエンドが完成したら、この中の実装だけを本物の fetch() 呼び出しに差し替えます。
 // 関数名・引数・戻り値の型は API設計書（GET/PATCH /api/me など）に合わせてあります。
 
+import { Platform } from 'react-native';
+import { authClient } from './auth-client';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+
+  if (Platform.OS !== 'web') {
+    headers.Cookie = authClient.getCookie();
+  }
+
+  return fetch(`${API_URL}${path}`, {
+    ...init,
+    credentials: Platform.OS === 'web' ? 'include' : undefined,
+    headers,
+  });
+}
+
 export type MeProfile = {
   id: string;
   name: string;
@@ -86,7 +108,7 @@ export async function sendFriendRequest(userId: string): Promise<void> {
   if (target) target.relationshipStatus = 'pending_sent';
 }
 
-// GET /api/me/friend-requests?direction=received 相当（apps/api/src/routes/me.ts のレスポンス形に合わせる）
+// GET /api/me/friend-requests?direction=received
 export type ReceivedFriendRequest = {
   friendshipId: number;
   id: string;
@@ -94,24 +116,22 @@ export type ReceivedFriendRequest = {
   name: string;
   image: string | null;
   bio: string | null;
-  mutualFriendCount: number; // 本APIには無いモック専用フィールド
+  mutualFriendCount: number;
 };
 
-let mockReceivedFriendRequests: ReceivedFriendRequest[] = [
-  { friendshipId: 1, id: 'u5', name: 'Nana', handle: 'nana.cafe', image: null, bio: null, mutualFriendCount: 3 },
-  { friendshipId: 2, id: 'u6', name: 'Ryo Sato', handle: 'ryo.food', image: null, bio: null, mutualFriendCount: 1 },
-];
-
 export async function getReceivedFriendRequests(): Promise<ReceivedFriendRequest[]> {
-  await delay(300);
-  return mockReceivedFriendRequests;
+  const res = await apiFetch('/api/me/friend-requests?direction=received');
+  if (!res.ok) throw new Error(`failed to fetch friend requests: ${res.status}`);
+  return res.json();
 }
 
-// PATCH /api/friendships/:id 相当
+// PATCH /api/friendships/:id
 export async function updateFriendshipRequest(friendshipId: number, data: { status: 'accepted' | 'denied' }): Promise<void> {
-  await delay(300);
-  void data;
-  mockReceivedFriendRequests = mockReceivedFriendRequests.filter((r) => r.friendshipId !== friendshipId);
+  const res = await apiFetch(`/api/friendships/${friendshipId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`failed to update friendship request: ${res.status}`);
 }
 
 // pinEmojiEnum (packages/db/src/schema/content.ts) と揃える
