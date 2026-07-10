@@ -76,7 +76,7 @@ export function BottomTabBar() {
   const router = useRouter();
 
   return (
-    <YStack backgroundColor="#000" borderTopWidth={1} borderTopColor="#1a1a1a" paddingTop="$2" paddingBottom="$2">
+    <YStack backgroundColor="#000" borderTopWidth={1} borderTopColor="#1a1a1a" paddingTop={14} paddingBottom={14}>
       <XStack justifyContent="space-around" alignItems="center">
         {TABS.map(({ key, route, label, Icon }) => {
           const active = isActiveRoute(pathname, route);
