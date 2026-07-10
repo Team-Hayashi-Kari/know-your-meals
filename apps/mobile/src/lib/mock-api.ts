@@ -356,32 +356,34 @@ export async function deletePost(postId: string): Promise<void> {
   if (index !== -1) mockNearbyPosts.splice(index, 1);
 }
 
-// 自分のプロフィール画面（FE-14）表示用の集計値。
-// フロント内部用の型：postsCount以外は本物APIの置き場所が未確定（/api/me か /api/friendships/* かなど）のため、
-// Step 2でAPI設計を精査してから本接続する（[[fe14-profile-summary-api]]）。
+// 自分のプロフィール画面（FE-14）表示用の集計値。フロント内部用の型（本物のAPIに /api/me/summary は無い）。
+// Step2で確定した方針：新規エンドポイントは作らず、既存3本の件数(.length)から組み立てる。
+//   postsCount           <- GET /api/me/posts の件数
+//   friendsCount          <- GET /api/me/friends の件数
+//   pendingReceivedCount <- GET /api/me/friend-requests?direction=received の件数
+// ProfileView が表示しない pendingSentCount・bookmarkedCount は持たない（使う画面ができたら追加する）。
 export type MyProfileSummary = {
   postsCount: number;
   friendsCount: number;
   pendingReceivedCount: number;
-  pendingSentCount: number;
-  bookmarkedCount: number;
 };
 
-// GET /api/me/summary 相当（TODO: Step2でエンドポイント/形を確定）
+// TODO(Step3): Promise.all で /api/me/posts・/api/me/friends・/api/me/friend-requests?direction=received を叩き、
+// 各配列の .length からこの形を組み立てる fetch 実装に差し替える。
 export async function getMyProfileSummary(): Promise<MyProfileSummary> {
   await delay(200);
   return {
     postsCount: mockNearbyPosts.filter((p) => p.isMine).length,
     friendsCount: 184,
     pendingReceivedCount: 2,
-    pendingSentCount: 2,
-    bookmarkedCount: 3,
   };
 }
 
 // アルバムグリッド表示に必要な最小限のみ持つフロント内部用の型。
 // NearbyPost をそのまま使うと距離・公開範囲などアルバムに不要な項目まで本物APIの形に見えてしまうため分離。
-// TODO(Step2): 本物の GET /api/me/posts のレスポンス形（ページネーション含む）に合わせて再定義する。
+// 本物の GET /api/me/posts は { id: number, imageUrl: string | null, comment, pin, shop, createdAt, updatedAt } を返す
+// （apps/api/src/routes/me.ts）。id は number、画像フィールド名は imageUri でなく imageUrl。
+// TODO(Step3): 本物のAPIに差し替えるとき、id を number にし imageUrl -> imageUri へ詰め替える（他のモック投稿型との命名統一のため）。
 export type ProfileAlbumPost = {
   id: string;
   imageUri: string | null;
