@@ -83,7 +83,11 @@ export function BottomTabBar() {
           return (
             <Pressable
               key={key}
-              onPress={() => router.push(route)}
+              // 現在アクティブなタブを再タップしても同じ画面を履歴に積み増さないよう何もしない
+              onPress={() => {
+                if (active) return;
+                router.push(route);
+              }}
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel={label}
