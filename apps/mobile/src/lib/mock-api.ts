@@ -58,8 +58,7 @@ type ApiSearchUser = {
 // GET /api/users/search?q=
 export async function searchUsers(query: string): Promise<UserSearchResult[]> {
   if (!query.trim()) return [];
-  const res = await apiFetch(`/api/users/search?q=${encodeURIComponent(query)}`);
-  const data = (await res.json()) as { users: ApiSearchUser[] };
+  const data = await apiFetch<{ users: ApiSearchUser[] }>(`/api/users/search?q=${encodeURIComponent(query)}`);
   return (data.users ?? []).map((u) => ({ ...u, handle: u.handle ?? '' }));
 }
 

@@ -1,14 +1,10 @@
 import { authClient } from './auth-client';
 
-const BASE = process.env.EXPO_PUBLIC_API_URL ?? '';
+type FetchResult<T> = { data: T; error: null } | { data: null; error: { message?: string; status: number } };
 
-export function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const cookie = authClient.getCookie();
-  return fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      ...init.headers,
-      ...(cookie ? { Cookie: cookie } : {}),
-    },
-  });
+// authClient.$fetch runs the expoClient fetchPlugin which attaches the session cookie automatically
+export async function apiFetch<T = unknown>(path: string, init?: RequestInit): Promise<T> {
+  const result = (await (authClient.$fetch as (url: string, opts?: unknown) => Promise<FetchResult<T>>)(path, init)) as FetchResult<T>;
+  if (result.error !== null) throw new Error(result.error.message ?? `HTTP ${result.error.status}`);
+  return result.data as T;
 }
