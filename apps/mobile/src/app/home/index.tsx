@@ -1,10 +1,19 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Spinner, Text, YStack } from 'tamagui';
 import { authClient } from '../../lib/auth-client';
+import { getReceivedFriendRequests } from '../../lib/mock-api';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const [receivedCount, setReceivedCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      getReceivedFriendRequests().then((requests) => setReceivedCount(requests.length));
+    }, []),
+  );
 
   const handleLogout = async () => {
     await authClient.signOut();
@@ -26,6 +35,9 @@ export default function HomeScreen() {
       </Text>
       <Text color="#555" fontSize={14}>
         {session?.user?.email ?? ''}
+      </Text>
+      <Text color="#fff" fontSize={14} fontWeight="600" onPress={() => router.push('/home/friends')}>
+        受信した申請{receivedCount > 0 ? ` ${receivedCount}` : ''}
       </Text>
       <Text color="#444" fontSize={13} fontWeight="600" onPress={handleLogout} marginTop="$4">
         ログアウト

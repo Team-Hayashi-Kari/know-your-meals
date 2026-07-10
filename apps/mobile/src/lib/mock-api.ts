@@ -86,6 +86,34 @@ export async function sendFriendRequest(userId: string): Promise<void> {
   if (target) target.relationshipStatus = 'pending_sent';
 }
 
+// GET /api/me/friend-requests?direction=received 相当（apps/api/src/routes/me.ts のレスポンス形に合わせる）
+export type ReceivedFriendRequest = {
+  friendshipId: number;
+  id: string;
+  handle: string | null;
+  name: string;
+  image: string | null;
+  bio: string | null;
+  mutualFriendCount: number; // 本APIには無いモック専用フィールド
+};
+
+let mockReceivedFriendRequests: ReceivedFriendRequest[] = [
+  { friendshipId: 1, id: 'u5', name: 'Nana', handle: 'nana.cafe', image: null, bio: null, mutualFriendCount: 3 },
+  { friendshipId: 2, id: 'u6', name: 'Ryo Sato', handle: 'ryo.food', image: null, bio: null, mutualFriendCount: 1 },
+];
+
+export async function getReceivedFriendRequests(): Promise<ReceivedFriendRequest[]> {
+  await delay(300);
+  return mockReceivedFriendRequests;
+}
+
+// PATCH /api/friendships/:id 相当
+export async function updateFriendshipRequest(friendshipId: number, data: { status: 'accepted' | 'denied' }): Promise<void> {
+  await delay(300);
+  void data;
+  mockReceivedFriendRequests = mockReceivedFriendRequests.filter((r) => r.friendshipId !== friendshipId);
+}
+
 // pinEmojiEnum (packages/db/src/schema/content.ts) と揃える
 export type PinEmoji = '🍜' | '🍣' | '🍛' | '🍙' | '🍔' | '🍕' | '🥩' | '🍰' | '🍺' | '🥟';
 
