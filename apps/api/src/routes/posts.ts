@@ -180,7 +180,7 @@ export const postsRoute = new Hono<Env>()
   .delete('/:id/bookmark', requireAuth, async (c) => {
     const authUser = c.get('user');
     const postId = Number(c.req.param('id'));
-    if (!Number.isInteger(postId) || postId <= 0) return c.json({ error: 'Not found' }, 404);
+    if (!Number.isInteger(postId) || postId <= 0) return c.json({ error: 'Invalid post id' }, 400);
 
     const db = createDb(c.env.DATABASE_URL);
 

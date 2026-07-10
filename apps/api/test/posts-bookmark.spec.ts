@@ -91,17 +91,17 @@ describe('DELETE /api/posts/:id/bookmark', () => {
     expect(matches({ userId: 'user2', postId: 102 })).toBe(false);
   });
 
-  it(':id が不正な場合は 404 を返す（DB問い合わせなし）', async () => {
+  it(':id が不正な場合は 400 を返す（DB問い合わせなし）', async () => {
     const res = await deleteBookmark('abc');
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(400);
     expect(deleteWhereMock).not.toHaveBeenCalled();
   });
 
-  it(':id が 0 以下の場合は 404 を返す（DB問い合わせなし）', async () => {
+  it(':id が 0 以下の場合は 400 を返す（DB問い合わせなし）', async () => {
     const res = await deleteBookmark(-1);
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(400);
     expect(deleteWhereMock).not.toHaveBeenCalled();
   });
 });
