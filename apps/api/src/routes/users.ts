@@ -8,6 +8,14 @@ import type { Env } from '../types';
 const LIMIT_DEFAULT = 20;
 const LIMIT_MAX = 50;
 
+type FriendshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'friends';
+
+function toFriendshipStatus(status: string | null, requesterId: string | null, currentUserId: string): FriendshipStatus {
+  if (status === 'accepted') return 'friends';
+  if (status === 'pending') return requesterId === currentUserId ? 'pending_sent' : 'pending_received';
+  return 'none';
+}
+
 export const usersRoute = new Hono<Env>()
   .get('/search', requireAuth, async (c) => {
     const currentUser = c.get('user');
@@ -39,11 +47,19 @@ export const usersRoute = new Hono<Env>()
     const where = and(searchCondition, ne(user.id, currentUser.id));
 
     try {
-      const [countResult, users] = await Promise.all([
+      const [countResult, rows] = await Promise.all([
         db.select({ total: count() }).from(user).where(where),
         db
-          .select({ id: user.id, name: user.name, handle: user.handle, image: user.image })
+          .select({
+            id: user.id,
+            name: user.name,
+            handle: user.handle,
+            image: user.image,
+            friendshipStatus: friendships.status,
+            requesterId: friendships.requesterId,
+          })
           .from(user)
+          .leftJoin(friendships, friendshipPairCondition(currentUser.id, user.id))
           .where(where)
           .orderBy(asc(user.name), asc(user.id))
           .limit(limit)
@@ -51,6 +67,10 @@ export const usersRoute = new Hono<Env>()
       ]);
       const total = countResult[0]?.total ?? 0;
       const hasMore = page * limit < total;
+      const users = rows.map(({ friendshipStatus, requesterId, ...u }) => ({
+        ...u,
+        friendshipStatus: toFriendshipStatus(friendshipStatus, requesterId, currentUser.id),
+      }));
       return c.json({ users, nextPage: hasMore ? page + 1 : null });
     } catch {
       return c.json({ error: 'Internal server error' }, 500);
