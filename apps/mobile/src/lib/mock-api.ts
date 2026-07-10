@@ -62,6 +62,13 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
   return mockUsers.filter((u) => u.handle.includes(q) || u.name.toLowerCase().includes(q));
 }
 
+// GET /api/users/suggestions 相当（おすすめフレンド）
+export async function getSuggestedUsers(): Promise<UserSearchResult[]> {
+  await delay(300);
+  // まだフレンドでない人をおすすめとして返す
+  return mockUsers.filter((u) => u.relationshipStatus === 'none');
+}
+
 // GET /api/users/check-handle?handle= 相当
 // そのIDが使えるか（他の人に使われていないか）を返す
 export async function checkHandleAvailable(handle: string): Promise<boolean> {
@@ -92,6 +99,10 @@ export type NearbyPost = {
   comment: string;
   imageUri: string | null;
   isFriendPost: boolean;
+  postedAt: string; // ISO8601。本物のAPI（GET /api/posts/:id）では posts.createdAt 相当
+  distanceMeters: number; // 現在地からの距離。本物は現在地×店舗座標から算出するためプレースホルダー（[[post-detail-distance-needs-task1-coordination]]参照）
+  isBookmarked: boolean; // 本物のAPI（GET /api/posts/:id、PR #111）では bookmarks への LEFT JOIN で判定
+  isMine: boolean; // 自分の投稿かどうか。本物は posts.userId === 自分のuserId で判定
 };
 
 const mockNearbyPosts: NearbyPost[] = [
@@ -105,6 +116,10 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: '味噌ラーメンが最高でした',
     imageUri: null,
     isFriendPost: true,
+    postedAt: '2026-07-09T22:20:00+09:00',
+    distanceMeters: 320,
+    isBookmarked: false,
+    isMine: false,
   },
   {
     id: 'p2',
@@ -116,6 +131,10 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: '大将のおまかせが絶品',
     imageUri: null,
     isFriendPost: false,
+    postedAt: '2026-07-09T19:05:00+09:00',
+    distanceMeters: 540,
+    isBookmarked: false,
+    isMine: false,
   },
   {
     id: 'p3',
@@ -127,6 +146,10 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: '麻婆豆腐が辛旨い',
     imageUri: null,
     isFriendPost: false,
+    postedAt: '2026-07-09T21:40:00+09:00',
+    distanceMeters: 810,
+    isBookmarked: false,
+    isMine: false,
   },
   {
     id: 'p4',
@@ -138,6 +161,10 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: '塩むすびが染みる',
     imageUri: null,
     isFriendPost: false,
+    postedAt: '2026-07-09T18:15:00+09:00',
+    distanceMeters: 150,
+    isBookmarked: false,
+    isMine: true,
   },
   {
     id: 'p5',
@@ -149,6 +176,10 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: 'パティが分厚い！',
     imageUri: null,
     isFriendPost: true,
+    postedAt: '2026-07-09T12:30:00+09:00',
+    distanceMeters: 970,
+    isBookmarked: false,
+    isMine: false,
   },
   {
     id: 'p6',
@@ -160,6 +191,10 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: 'マルゲリータが本格的',
     imageUri: null,
     isFriendPost: false,
+    postedAt: '2026-07-08T19:50:00+09:00',
+    distanceMeters: 1200,
+    isBookmarked: false,
+    isMine: false,
   },
   {
     id: 'p7',
@@ -171,6 +206,10 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: '特上カルビ食べ放題',
     imageUri: null,
     isFriendPost: false,
+    postedAt: '2026-07-08T20:10:00+09:00',
+    distanceMeters: 430,
+    isBookmarked: false,
+    isMine: false,
   },
   {
     id: 'p8',
@@ -182,6 +221,10 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: 'モンブランが季節限定',
     imageUri: null,
     isFriendPost: false,
+    postedAt: '2026-07-07T15:00:00+09:00',
+    distanceMeters: 260,
+    isBookmarked: false,
+    isMine: false,
   },
   {
     id: 'p9',
@@ -193,6 +236,10 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: 'ハイボールと餃子が最強',
     imageUri: null,
     isFriendPost: false,
+    postedAt: '2026-07-06T22:30:00+09:00',
+    distanceMeters: 690,
+    isBookmarked: false,
+    isMine: false,
   },
   {
     id: 'p10',
@@ -204,10 +251,12 @@ const mockNearbyPosts: NearbyPost[] = [
     comment: '小籠包の肉汁がやばい',
     imageUri: null,
     isFriendPost: false,
+    postedAt: '2026-07-06T13:45:00+09:00',
+    distanceMeters: 1050,
+    isBookmarked: false,
+    isMine: false,
   },
 ];
-
-const mockBookmarkedPostIds = new Set<string>();
 
 // GET /api/map/posts?bbox= 相当
 export async function getNearbyPosts(lat: number, lng: number): Promise<NearbyPost[]> {
@@ -215,7 +264,8 @@ export async function getNearbyPosts(lat: number, lng: number): Promise<NearbyPo
   // 本物のAPIでは lat/lng から算出した bbox で範囲検索する
   void lat;
   void lng;
-  return mockNearbyPosts;
+  // 表示はフレンド公開範囲のみ（Issue #70 備考）
+  return mockNearbyPosts.filter((p) => p.isFriendPost);
 }
 
 // GET /api/posts/:id 相当
@@ -237,6 +287,10 @@ export async function createPost(draft: { storeId: string; comment: string; pin:
     comment: draft.comment,
     imageUri: draft.imageUri,
     isFriendPost: false,
+    postedAt: new Date().toISOString(),
+    distanceMeters: 0,
+    isBookmarked: false,
+    isMine: true,
   };
   mockNearbyPosts.unshift(newPost);
   return newPost;
@@ -245,9 +299,13 @@ export async function createPost(draft: { storeId: string; comment: string; pin:
 // POST/DELETE /api/posts/:id/bookmark 相当
 export async function toggleBookmark(postId: string): Promise<void> {
   await delay(200);
-  if (mockBookmarkedPostIds.has(postId)) {
-    mockBookmarkedPostIds.delete(postId);
-  } else {
-    mockBookmarkedPostIds.add(postId);
-  }
+  const post = mockNearbyPosts.find((p) => p.id === postId);
+  if (post) post.isBookmarked = !post.isBookmarked;
+}
+
+// DELETE /api/posts/:id 相当（本人のみ、PR #115でバックエンド実装中）
+export async function deletePost(postId: string): Promise<void> {
+  await delay(300);
+  const index = mockNearbyPosts.findIndex((p) => p.id === postId);
+  if (index !== -1) mockNearbyPosts.splice(index, 1);
 }
