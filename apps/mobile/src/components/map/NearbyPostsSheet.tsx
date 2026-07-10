@@ -1,5 +1,6 @@
-import { Pressable } from 'react-native';
-import { ScrollView, Text, XStack, YStack } from 'tamagui';
+import { useRef, useState } from 'react';
+import { Pressable, useWindowDimensions } from 'react-native';
+import { ScrollView, type TamaguiElement, Text, XStack, YStack } from 'tamagui';
 import type { NearbyPost } from '../../lib/mock-api';
 import { Avatar } from '../post-flow/Avatar';
 import { PinBadge } from '../post-flow/PinBadge';
@@ -9,15 +10,62 @@ type NearbyPostsSheetProps = {
   onPressPost: (postId: string) => void;
 };
 
-// @gorhom/bottom-sheet 等のドラッグ式シートは使わず、固定高さのパネルとして実装（Web専用のため十分）
+// つまみをドラッグして高さを変えられる下部シート。Web専用のため、
+// @gorhom/bottom-sheet 等のネイティブジェスチャー前提のライブラリは使わず、
+// ブラウザのポインターイベントで実装している。
 export function NearbyPostsSheet({ posts, onPressPost }: NearbyPostsSheetProps) {
+  const { height: windowHeight } = useWindowDimensions();
+
+  const collapsedHeight = 120;
+  const halfHeight = windowHeight * 0.45;
+  const fullHeight = windowHeight * 0.85;
+  const snapPoints = [collapsedHeight, halfHeight, fullHeight];
+
+  const [sheetHeight, setSheetHeight] = useState(halfHeight);
+  const dragState = useRef<{ startY: number; startHeight: number } | null>(null);
+  const currentHeight = useRef(halfHeight);
+  const sheetRef = useRef<TamaguiElement>(null);
+
+  // ドラッグ中に毎回setState→再描画（下の投稿リストの再計算も含む）を挟むとカクつくため、
+  // ドラッグ中はDOM要素のstyle.heightを直接書き換え、Reactの状態更新は指を離した瞬間(スナップ)だけ行う
+  const handlePointerDown = (e: { clientY: number }) => {
+    dragState.current = { startY: e.clientY, startHeight: currentHeight.current };
+
+    const handleWindowPointerMove = (moveEvent: PointerEvent) => {
+      if (!dragState.current) return;
+      // シートの端を指/カーソルの位置に正確に一致させるため、移動量は等倍(1:1)で反映する
+      const delta = dragState.current.startY - moveEvent.clientY;
+      const next = Math.min(fullHeight, Math.max(collapsedHeight, dragState.current.startHeight + delta));
+      currentHeight.current = next;
+      // Web専用のため、TamaguiElement(型定義上はネイティブViewとの共用)をHTMLElementとして扱ってよい
+      const node = sheetRef.current as HTMLElement | null;
+      if (node) node.style.height = `${next}px`;
+    };
+
+    const handleWindowPointerUp = () => {
+      dragState.current = null;
+      const nearest = snapPoints.reduce((closest, point) =>
+        Math.abs(point - currentHeight.current) < Math.abs(closest - currentHeight.current) ? point : closest,
+      );
+      currentHeight.current = nearest;
+      setSheetHeight(nearest);
+      window.removeEventListener('pointermove', handleWindowPointerMove);
+      window.removeEventListener('pointerup', handleWindowPointerUp);
+    };
+
+    window.addEventListener('pointermove', handleWindowPointerMove);
+    window.addEventListener('pointerup', handleWindowPointerUp);
+  };
+
   return (
     <YStack
+      ref={sheetRef}
       position="absolute"
       bottom={0}
       left={0}
       right={0}
-      height="45%"
+      zIndex={10}
+      height={sheetHeight}
       backgroundColor="#000"
       borderTopLeftRadius={20}
       borderTopRightRadius={20}
@@ -25,8 +73,7 @@ export function NearbyPostsSheet({ posts, onPressPost }: NearbyPostsSheetProps) 
       borderColor="#1a1a1a"
       overflow="hidden"
     >
-      {/* つまみ（見た目のみ、ドラッグ操作は無し） */}
-      <YStack alignItems="center" paddingTop="$3" paddingBottom="$2">
+      <YStack alignItems="center" paddingTop="$3" paddingBottom="$2" cursor="grab" onPointerDown={handlePointerDown} style={{ touchAction: 'none' }}>
         <YStack width={36} height={4} borderRadius={2} backgroundColor="#333" />
       </YStack>
 
