@@ -2,7 +2,7 @@ import { getAvatarColor, getAvatarInitial } from '@repo/shared';
 import type { ReactNode } from 'react';
 import { Image as RNImage } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import type { NearbyPost } from '../../lib/mock-api';
+import type { ProfilePost } from '../../lib/api';
 
 const GRID_GAP = 2;
 
@@ -17,7 +17,7 @@ export type ProfileViewData = {
 
 type ProfileViewProps = {
   profile: ProfileViewData;
-  posts: NearbyPost[];
+  posts: ProfilePost[];
   // 右上または自己紹介下に置くアクション領域。自分プロフィールなら「編集」、他人プロフィールなら relationshipStatus 別 CTA
   actions?: ReactNode;
 };
@@ -81,7 +81,7 @@ export function ProfileView({ profile, posts, actions }: ProfileViewProps) {
       <XStack flexWrap="wrap" gap={GRID_GAP} marginTop="$2">
         {posts.map((post) => (
           <YStack key={post.id} width="32.5%" aspectRatio={1} backgroundColor="#1a1a1a" justifyContent="center" alignItems="center">
-            <Text fontSize={28}>{post.genreEmoji}</Text>
+            <Text fontSize={28}>{post.pin}</Text>
           </YStack>
         ))}
       </XStack>

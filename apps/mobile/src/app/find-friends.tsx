@@ -1,46 +1,42 @@
 import { getAvatarColor, getAvatarInitial } from '@repo/shared';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Button, Input, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
-import { getSuggestedUsers, searchUsers, sendFriendRequest, type UserSearchResult } from '../lib/mock-api';
+import { ApiError, searchUsers, sendFriendRequest, type UserSearchResult } from '../lib/api';
 
 export default function FindFriendsScreen() {
   const router = useRouter();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserSearchResult[]>([]);
-  const [suggested, setSuggested] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   // 1人でも申請したかどうか
   const [hasRequested, setHasRequested] = useState(false);
 
-  // 画面にフォーカスが戻るたび（他人プロフィールから戻ってきた時含む）に再取得し、relationshipStatusの古い表示を防ぐ
-  useFocusEffect(
-    useCallback(() => {
-      getSuggestedUsers().then((users) => setSuggested(users));
-      const trimmed = query.trim();
-      if (trimmed) {
-        searchUsers(trimmed).then((users) => setResults(users));
-      }
-    }, [query]),
-  );
-
   // 検索欄が変わるたびに検索
   useEffect(() => {
-    if (!query.trim()) {
+    const trimmed = query.trim();
+    if (!trimmed) {
       setResults([]);
       setLoading(false);
       return;
     }
     setLoading(true);
     const timer = setTimeout(() => {
-      searchUsers(query).then((users) => {
-        setResults(users);
-        setLoading(false);
-      });
+      searchUsers(trimmed)
+        .then((users) => setResults(users))
+        .catch((e) => {
+          if (e instanceof ApiError && e.status === 401) {
+            router.replace('/');
+            return;
+          }
+          console.error('[FindFriendsScreen] search failed', e);
+          setResults([]);
+        })
+        .finally(() => setLoading(false));
     }, 300);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, router]);
 
   const isSearching = query.trim() !== '';
 
@@ -83,18 +79,10 @@ export default function FindFriendsScreen() {
         marginBottom="$4"
       />
 
-      {/* 検索中の見出し or おすすめの見出し */}
-      {!isSearching && suggested.length > 0 && (
-        <Text color="#888" fontSize={13} fontWeight="600" marginBottom="$3">
-          おすすめのフレンド
-        </Text>
-      )}
-
       <YStack gap="$3">
         {loading ? (
           <Spinner color="#555" marginTop="$4" />
         ) : isSearching ? (
-          // 検索中
           results.length > 0 ? (
             results.map((user) => <UserRow key={user.id} user={user} onRequested={() => setHasRequested(true)} />)
           ) : (
@@ -102,10 +90,7 @@ export default function FindFriendsScreen() {
               「{query.trim()}」の検索結果はありません
             </Text>
           )
-        ) : (
-          // 検索していないときはおすすめを表示
-          suggested.map((user) => <UserRow key={user.id} user={user} onRequested={() => setHasRequested(true)} />)
-        )}
+        ) : null}
       </YStack>
 
       <Button
@@ -124,24 +109,35 @@ export default function FindFriendsScreen() {
   );
 }
 
+const STATUS_LABEL: Record<Exclude<UserSearchResult['relationshipStatus'], 'none'>, string> = {
+  pending_sent: '申請中',
+  pending_received: '承認待ち',
+  friends: 'フレンド',
+};
+
 function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: () => void }) {
   const [status, setStatus] = useState(user.relationshipStatus);
   const [sending, setSending] = useState(false);
-
-  // フォーカス復帰時の再取得で prop が変わっても、同じ key の行は state を保持したままなので同期する
-  useEffect(() => {
-    setStatus(user.relationshipStatus);
-  }, [user.relationshipStatus]);
+  const router = useRouter();
 
   const handleSend = async () => {
     setSending(true);
-    await sendFriendRequest(user.id);
-    setStatus('pending_sent');
-    setSending(false);
-    onRequested();
+    try {
+      await sendFriendRequest(user.id);
+      setStatus('pending_sent');
+      onRequested();
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        router.replace('/');
+        return;
+      }
+      // 409 (申請済みなどの競合) を含め、失敗時は申請済み扱いにして表示を同期する
+      console.error('[UserRow] sendFriendRequest failed', e);
+      setStatus('pending_sent');
+    } finally {
+      setSending(false);
+    }
   };
-
-  const router = useRouter();
 
   return (
     <XStack alignItems="center" gap="$3">
@@ -160,16 +156,16 @@ function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: (
           </Text>
         </YStack>
       </XStack>
-      {status === 'pending_sent' ? (
-        <Text color="#555" fontSize={13} fontWeight="600">
-          申請中
-        </Text>
-      ) : (
+      {status === 'none' ? (
         <Button onPress={handleSend} disabled={sending} backgroundColor="#1a1a1a" borderRadius="$4" height={36} paddingHorizontal="$4">
           <Text color="#ffd400" fontSize={13} fontWeight="700">
             申請する
           </Text>
         </Button>
+      ) : (
+        <Text color="#555" fontSize={13} fontWeight="600">
+          {STATUS_LABEL[status]}
+        </Text>
       )}
     </XStack>
   );

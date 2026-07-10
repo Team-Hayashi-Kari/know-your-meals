@@ -1,46 +1,63 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button, ScrollView, Spinner, Text, YStack } from 'tamagui';
 import { ProfileView } from '../../components/profile/ProfileView';
 import {
+  ApiError,
   acceptFriendRequest,
   cancelFriendRequest,
   getUserPosts,
   getUserProfile,
-  type NearbyPost,
+  type ProfilePost,
   type RelationshipStatus,
   sendFriendRequest,
   type UserProfile,
-} from '../../lib/mock-api';
+} from '../../lib/api';
 
 export default function UserProfileScreen() {
   const router = useRouter();
   const { handle } = useLocalSearchParams<{ handle: string }>();
 
   const [profile, setProfile] = useState<UserProfile | undefined>(undefined);
-  const [posts, setPosts] = useState<NearbyPost[]>([]);
+  const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!handle) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    Promise.all([getUserProfile(handle), getUserPosts(handle)]).then(([p, userPosts]) => {
+  const load = useCallback(async () => {
+    if (!handle) return;
+    try {
+      const p = await getUserProfile(handle);
+      if (!p) {
+        setProfile(undefined);
+        setPosts([]);
+        return;
+      }
       setProfile(p);
-      setPosts(userPosts);
-      setLoading(false);
-    });
-  }, [handle]);
+      try {
+        setPosts(await getUserPosts(handle));
+      } catch (e) {
+        // 非フレンドは投稿一覧が404になる仕様（apps/api/src/routes/users.ts）。プロフィール自体は表示する
+        if (e instanceof ApiError && e.status === 404) {
+          setPosts([]);
+        } else {
+          throw e;
+        }
+      }
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        router.replace('/');
+        return;
+      }
+      // 404以外の予期しないエラーはログに残しつつ、not found 表示にフォールバックする
+      console.error('[UserProfileScreen] load failed', e);
+      setProfile(undefined);
+      setPosts([]);
+    }
+  }, [handle, router]);
 
-  const updateStatus = (relationshipStatus: RelationshipStatus) => {
-    setProfile((prev) => {
-      if (!prev) return prev;
-      const gainedFriend = relationshipStatus === 'friends' && prev.relationshipStatus !== 'friends';
-      return { ...prev, relationshipStatus, friendCount: gainedFriend ? prev.friendCount + 1 : prev.friendCount };
-    });
-  };
+  useEffect(() => {
+    setLoading(true);
+    load().finally(() => setLoading(false));
+  }, [load]);
 
   if (loading) {
     return (
@@ -85,20 +102,38 @@ export default function UserProfileScreen() {
       <ProfileView
         profile={profile}
         posts={posts}
-        actions={<FriendCta userId={profile.id} status={profile.relationshipStatus} onChange={updateStatus} />}
+        actions={<FriendCta userId={profile.id} friendshipId={profile.friendshipId} status={profile.relationshipStatus} onChange={load} />}
       />
     </ScrollView>
   );
 }
 
-function FriendCta({ userId, status, onChange }: { userId: string; status: RelationshipStatus; onChange: (status: RelationshipStatus) => void }) {
+function FriendCta({
+  userId,
+  friendshipId,
+  status,
+  onChange,
+}: {
+  userId: string;
+  friendshipId: number | null;
+  status: RelationshipStatus;
+  onChange: () => Promise<void>;
+}) {
   const [busy, setBusy] = useState(false);
 
-  const run = async (action: () => Promise<void>, next: RelationshipStatus) => {
+  const run = async (action: () => Promise<void>) => {
     setBusy(true);
-    await action();
-    onChange(next);
-    setBusy(false);
+    try {
+      await action();
+    } catch (e) {
+      // 409 (競合) はプロフィール再取得で状態を同期する。それ以外はログに残す
+      if (!(e instanceof ApiError && e.status === 409)) {
+        console.error('[FriendCta] action failed', e);
+      }
+    } finally {
+      await onChange();
+      setBusy(false);
+    }
   };
 
   if (status === 'friends') {
@@ -114,7 +149,7 @@ function FriendCta({ userId, status, onChange }: { userId: string; status: Relat
   if (status === 'pending_received') {
     return (
       <Button
-        onPress={() => run(() => acceptFriendRequest(userId), 'friends')}
+        onPress={() => friendshipId !== null && run(() => acceptFriendRequest(friendshipId))}
         disabled={busy}
         backgroundColor="#ffd400"
         borderRadius="$4"
@@ -133,7 +168,13 @@ function FriendCta({ userId, status, onChange }: { userId: string; status: Relat
 
   if (status === 'pending_sent') {
     return (
-      <Button onPress={() => run(() => cancelFriendRequest(userId), 'none')} disabled={busy} backgroundColor="#1a1a1a" borderRadius="$4" height={44}>
+      <Button
+        onPress={() => friendshipId !== null && run(() => cancelFriendRequest(friendshipId))}
+        disabled={busy}
+        backgroundColor="#1a1a1a"
+        borderRadius="$4"
+        height={44}
+      >
         {busy ? (
           <Spinner color="#ffd400" />
         ) : (
@@ -146,7 +187,7 @@ function FriendCta({ userId, status, onChange }: { userId: string; status: Relat
   }
 
   return (
-    <Button onPress={() => run(() => sendFriendRequest(userId), 'pending_sent')} disabled={busy} backgroundColor="#fff" borderRadius="$4" height={44}>
+    <Button onPress={() => run(() => sendFriendRequest(userId))} disabled={busy} backgroundColor="#fff" borderRadius="$4" height={44}>
       {busy ? (
         <Spinner color="#000" />
       ) : (
