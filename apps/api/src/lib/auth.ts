@@ -17,5 +17,8 @@ export function createAuth(env: Bindings) {
     },
     trustedOrigins: ['exp://', 'http://localhost:8081', 'https://know-your-meals.pages.dev'],
     plugins: [expo()],
+    account: {
+      storeStateStrategy: 'cookie',
+    },
   });
 }
