@@ -245,4 +245,20 @@ export const postsRoute = new Hono<Env>()
     }
 
     return c.json({ bookmarked: true }, 201);
+  })
+  .delete('/:id/bookmark', requireAuth, async (c) => {
+    const authUser = c.get('user');
+    const postId = Number(c.req.param('id'));
+    if (!Number.isInteger(postId) || postId <= 0) return c.json({ error: 'Invalid post id' }, 400);
+
+    const db = createDb(c.env.DATABASE_URL);
+
+    const [deleted] = await db
+      .delete(bookmarks)
+      .where(and(eq(bookmarks.userId, authUser.id), eq(bookmarks.postId, postId)))
+      .returning();
+
+    if (!deleted) return c.json({ error: 'Bookmark not found' }, 404);
+
+    return c.body(null, 204);
   });
