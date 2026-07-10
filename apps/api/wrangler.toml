@@ -9,3 +9,8 @@ IMAGES_BASE_URL = "https://pub-ec6f9e5e07a74dd4b273a9ba89e6ab93.r2.dev"
 [[r2_buckets]]
 binding = "IMAGES_BUCKET"
 bucket_name = "know-your-meals-images"
+
+[[rules]]
+type = "Data"
+globs = ["**/*.woff2"]
+fallthrough = true
