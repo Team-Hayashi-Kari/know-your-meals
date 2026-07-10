@@ -1,6 +1,35 @@
 import { AdvancedMarker, APIProvider, Map, useApiIsLoaded, useApiLoadingStatus } from '@vis.gl/react-google-maps';
+import { useEffect, useState } from 'react';
 import { Text, YStack } from 'tamagui';
 import type { NearbyPost } from '../../lib/mock-api';
+
+// Google Maps JS APIは「有効化されていないAPI」等のエラーをイベントとして通知せず
+// console.error にしか出さないため、既知のエラー名をここで横取りして検知する
+// (参照: https://developers.google.com/maps/documentation/javascript/error-messages)
+const GOOGLE_MAPS_ERROR_PATTERN = /ApiNotActivatedMapError|InvalidKeyMapError|RefererNotAllowedMapError|MissingKeyMapError/;
+
+function useGoogleMapsConsoleError(): string | null {
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const originalConsoleError = console.error;
+    console.error = (...args: unknown[]) => {
+      const message = args.map(String).join(' ');
+      const matched = message.match(GOOGLE_MAPS_ERROR_PATTERN)?.[0];
+      if (matched) {
+        // 画面側で表示済みのため、開発モードのLogBox全画面エラーには渡さない
+        setError(matched);
+        return;
+      }
+      originalConsoleError(...args);
+    };
+    return () => {
+      console.error = originalConsoleError;
+    };
+  }, []);
+
+  return error;
+}
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -39,8 +68,9 @@ export function GoogleMapView({ center, posts, onPressPost }: GoogleMapViewProps
 function MapInner({ center, posts, onPressPost }: GoogleMapViewProps) {
   const isLoaded = useApiIsLoaded();
   const loadingStatus = useApiLoadingStatus();
+  const consoleError = useGoogleMapsConsoleError();
 
-  if (loadingStatus === 'FAILED' || loadingStatus === 'AUTH_FAILURE') {
+  if (loadingStatus === 'FAILED' || loadingStatus === 'AUTH_FAILURE' || consoleError) {
     return (
       <YStack flex={1} backgroundColor="#0f0f10" justifyContent="center" alignItems="center" padding="$5" gap="$2">
         <Text color="#ddd" fontSize={15} fontWeight="700" textAlign="center">
@@ -48,6 +78,7 @@ function MapInner({ center, posts, onPressPost }: GoogleMapViewProps) {
         </Text>
         <Text color="#666" fontSize={13} textAlign="center" lineHeight={20}>
           Google Maps APIキーが無効か、Maps JavaScript APIが有効化されていない可能性があります
+          {consoleError ? `（${consoleError}）` : ''}
         </Text>
       </YStack>
     );
