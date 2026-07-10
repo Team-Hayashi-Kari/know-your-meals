@@ -1,3 +1,4 @@
+import { getAvatarColor, getAvatarInitial } from '@repo/shared';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -146,7 +147,7 @@ export default function ProfileSetupScreen() {
             width={96}
             height={96}
             borderRadius={48}
-            backgroundColor={image ? '#1a1a1a' : getColorFromName(name)}
+            backgroundColor={image ? '#1a1a1a' : getAvatarColor(name)}
             justifyContent="center"
             alignItems="center"
             overflow="hidden"
@@ -155,7 +156,7 @@ export default function ProfileSetupScreen() {
               <RNImage source={{ uri: image }} style={{ width: 96, height: 96 }} resizeMode="cover" />
             ) : (
               <Text color="#fff" fontSize={40} fontWeight="700">
-                {getInitial(name)}
+                {getAvatarInitial(name)}
               </Text>
             )}
           </YStack>
@@ -310,20 +311,4 @@ function countChars(str: string): number {
 // IDに使える文字かどうか（半角英数字・アンダースコア・ドットのみ）
 function isHandleFormatValid(h: string): boolean {
   return /^[a-zA-Z0-9_.]+$/.test(h);
-}
-
-function getInitial(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) return '?';
-  return trimmed.charAt(0).toUpperCase();
-}
-
-function getColorFromName(name: string): string {
-  const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#e84393'];
-  if (!name.trim()) return '#333';
-  let sum = 0;
-  for (let i = 0; i < name.length; i++) {
-    sum += name.charCodeAt(i);
-  }
-  return colors[sum % colors.length];
 }
