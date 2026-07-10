@@ -1,9 +1,16 @@
 import { createDb, friendships, images, posts, shops, user } from '@repo/db';
-import { and, asc, count, desc, eq, ilike, isNotNull, ne, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, ne, or } from 'drizzle-orm';
 import { Hono } from 'hono';
-import { friendshipPairCondition } from '../lib/friendship';
+import { deriveRelationship, friendshipPairCondition } from '../lib/friendship';
 import { requireAuth } from '../middleware/auth';
 import type { Env } from '../types';
+
+const friendshipRowSelect = {
+  id: friendships.id,
+  status: friendships.status,
+  requesterId: friendships.requesterId,
+  addresseeId: friendships.addresseeId,
+};
 
 const LIMIT_DEFAULT = 20;
 const LIMIT_MAX = 50;
@@ -51,7 +58,27 @@ export const usersRoute = new Hono<Env>()
       ]);
       const total = countResult[0]?.total ?? 0;
       const hasMore = page * limit < total;
-      return c.json({ users, nextPage: hasMore ? page + 1 : null });
+
+      const ids = users.map((u) => u.id);
+      const friendshipRows = ids.length
+        ? await db
+            .select(friendshipRowSelect)
+            .from(friendships)
+            .where(
+              or(
+                and(eq(friendships.requesterId, currentUser.id), inArray(friendships.addresseeId, ids)),
+                and(eq(friendships.addresseeId, currentUser.id), inArray(friendships.requesterId, ids)),
+              ),
+            )
+        : [];
+      const relationshipByUserId = new Map(
+        friendshipRows.map((row) => [row.requesterId === currentUser.id ? row.addresseeId : row.requesterId, row]),
+      );
+
+      return c.json({
+        users: users.map((u) => ({ ...u, ...deriveRelationship(relationshipByUserId.get(u.id), currentUser.id) })),
+        nextPage: hasMore ? page + 1 : null,
+      });
     } catch {
       return c.json({ error: 'Internal server error' }, 500);
     }
@@ -121,7 +148,9 @@ export const usersRoute = new Hono<Env>()
     }
   })
   .get('/:handle', requireAuth, async (c) => {
-    const handle = c.req.param('handle');
+    const authUser = c.get('user');
+    const rawHandle = c.req.param('handle');
+    const handle = rawHandle.startsWith('@') ? rawHandle.slice(1) : rawHandle;
 
     if (!handle) {
       return c.json({ error: 'handle is required' }, 400);
@@ -136,7 +165,22 @@ export const usersRoute = new Hono<Env>()
         .where(eq(user.handle, handle));
 
       if (!found) return c.json({ error: 'User not found' }, 404);
-      return c.json(found);
+
+      const [postCountResult, friendCountResult, friendshipRows] = await Promise.all([
+        db.select({ total: count() }).from(posts).where(eq(posts.userId, found.id)),
+        db
+          .select({ total: count() })
+          .from(friendships)
+          .where(and(eq(friendships.status, 'accepted'), or(eq(friendships.requesterId, found.id), eq(friendships.addresseeId, found.id)))),
+        db.select(friendshipRowSelect).from(friendships).where(friendshipPairCondition(authUser.id, found.id)),
+      ]);
+
+      return c.json({
+        ...found,
+        postCount: postCountResult[0]?.total ?? 0,
+        friendCount: friendCountResult[0]?.total ?? 0,
+        ...deriveRelationship(friendshipRows[0], authUser.id),
+      });
     } catch {
       return c.json({ error: 'Internal server error' }, 500);
     }
