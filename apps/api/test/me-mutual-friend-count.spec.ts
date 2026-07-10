@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { sql } from 'drizzle-orm';
-import { pgTable, text } from 'drizzle-orm/pg-core';
-import { PgDialect } from 'drizzle-orm/pg-core';
+import { PgDialect, pgTable, text } from 'drizzle-orm/pg-core';
 import { mutualFriendCountSql } from '../src/routes/me';
 
 // GET /api/me/friend-requests?direction=received の mutualFriendCount を作る

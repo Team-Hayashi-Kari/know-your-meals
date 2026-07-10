@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Spinner, Text, YStack } from 'tamagui';
 import { ProfileView, type ProfileViewPost } from '../../components/profile/ProfileView';
-import { ApiError, getMe, getMyFriends, getMyPosts, getMyReceivedFriendRequests, toAbsoluteApiUrl, type MeProfile } from '../../lib/profile-api';
+import { ApiError, getMe, getMyFriends, getMyPosts, getMyReceivedFriendRequests, type MeProfile, toAbsoluteApiUrl } from '../../lib/profile-api';
 
 type Summary = {
   postsCount: number;
