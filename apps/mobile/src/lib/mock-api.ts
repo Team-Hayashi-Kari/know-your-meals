@@ -118,7 +118,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: true,
     postedAt: '2026-07-09T22:20:00+09:00',
     distanceMeters: 320,
-    isBookmarked: false,
+    isBookmarked: true,
     isMine: false,
   },
   {
@@ -133,7 +133,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: false,
     postedAt: '2026-07-09T19:05:00+09:00',
     distanceMeters: 540,
-    isBookmarked: false,
+    isBookmarked: true,
     isMine: false,
   },
   {
@@ -266,6 +266,12 @@ export async function getNearbyPosts(lat: number, lng: number): Promise<NearbyPo
   void lng;
   // 表示はフレンド公開範囲のみ（Issue #70 備考）
   return mockNearbyPosts.filter((p) => p.isFriendPost);
+}
+
+// GET /api/me/bookmarks 相当
+export async function getBookmarkedPosts(): Promise<NearbyPost[]> {
+  await delay(300);
+  return mockNearbyPosts.filter((post) => post.isBookmarked);
 }
 
 // GET /api/posts/:id 相当
