@@ -195,20 +195,15 @@ export const postsRoute = new Hono<Env>()
 
     const db = createDb(c.env.DATABASE_URL);
 
-    const [visiblePost] = await db
-      .select({ id: posts.id })
+    const [row] = await db
+      .select({ id: posts.id, bookmarkId: bookmarks.id })
       .from(posts)
       .leftJoin(friendships, postFriendshipCondition(authUser.id))
+      .leftJoin(bookmarks, and(eq(bookmarks.postId, posts.id), eq(bookmarks.userId, authUser.id)))
       .where(and(eq(posts.id, rawId), or(eq(posts.userId, authUser.id), eq(friendships.status, 'accepted'))));
 
-    if (!visiblePost) return c.json({ error: 'Not found' }, 404);
-
-    const [existing] = await db
-      .select({ id: bookmarks.id })
-      .from(bookmarks)
-      .where(and(eq(bookmarks.userId, authUser.id), eq(bookmarks.postId, rawId)));
-
-    if (existing) return c.json({ error: 'Already bookmarked' }, 409);
+    if (!row) return c.json({ error: 'Not found' }, 404);
+    if (row.bookmarkId !== null) return c.json({ error: 'Already bookmarked' }, 409);
 
     try {
       await db.insert(bookmarks).values({ userId: authUser.id, postId: rawId });
