@@ -131,10 +131,7 @@ async function getMutualFriendCounts(db: Db, authUserId: string, requesterIds: s
     .select({ requesterId: friendships.requesterId, addresseeId: friendships.addresseeId })
     .from(friendships)
     .where(
-      and(
-        eq(friendships.status, 'accepted'),
-        or(inArray(friendships.requesterId, requesterIds), inArray(friendships.addresseeId, requesterIds)),
-      ),
+      and(eq(friendships.status, 'accepted'), or(inArray(friendships.requesterId, requesterIds), inArray(friendships.addresseeId, requesterIds))),
     );
 
   for (const row of theirFriendRows) {

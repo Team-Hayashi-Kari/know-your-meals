@@ -2,7 +2,7 @@ import { getAvatarColor, getAvatarInitial } from '@repo/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Button, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
-import { getReceivedFriendRequests, updateFriendshipRequest, type ReceivedFriendRequest } from '../../lib/mock-api';
+import { getReceivedFriendRequests, type ReceivedFriendRequest, updateFriendshipRequest } from '../../lib/mock-api';
 
 export default function FriendRequestsScreen() {
   const router = useRouter();
@@ -29,11 +29,7 @@ export default function FriendRequestsScreen() {
   return (
     <YStack flex={1} backgroundColor="#000">
       <XStack alignItems="center" paddingHorizontal="$5" paddingTop={64} paddingBottom="$4" gap="$3">
-        <Text
-          color="#fff"
-          fontSize={22}
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))}
-        >
+        <Text color="#fff" fontSize={22} onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))}>
           ←
         </Text>
         <Text color="#fff" fontSize={20} fontWeight="700">
@@ -92,14 +88,7 @@ function RequestRow({ request, onResolved }: { request: ReceivedFriendRequest; o
   return (
     <YStack paddingHorizontal="$5" paddingVertical="$4" borderBottomWidth={1} borderBottomColor="#1a1a1a" gap="$3">
       <XStack alignItems="center" gap="$3">
-        <YStack
-          width={44}
-          height={44}
-          borderRadius={22}
-          backgroundColor={getAvatarColor(request.name)}
-          justifyContent="center"
-          alignItems="center"
-        >
+        <YStack width={44} height={44} borderRadius={22} backgroundColor={getAvatarColor(request.name)} justifyContent="center" alignItems="center">
           <Text color="#fff" fontSize={18} fontWeight="700">
             {getAvatarInitial(request.name)}
           </Text>
