@@ -1,28 +1,63 @@
 import { getAvatarColor, getAvatarInitial } from '@repo/shared';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Spinner, Text, YStack } from 'tamagui';
-import { ProfileView } from '../../components/profile/ProfileView';
-import {
-  getMe,
-  getMyPosts,
-  getMyProfileSummary,
-  type MeProfile,
-  type MyProfileSummary,
-  type ProfileAlbumPost,
-} from '../../lib/mock-api';
+import { ProfileView, type ProfileViewPost } from '../../components/profile/ProfileView';
+import { ApiError, getMe, getMyFriends, getMyPosts, getMyReceivedFriendRequests, toAbsoluteApiUrl, type MeProfile } from '../../lib/profile-api';
+
+type Summary = {
+  postsCount: number;
+  friendsCount: number;
+  pendingReceivedCount: number;
+};
 
 export default function MyProfileScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<MeProfile | null>(null);
-  const [summary, setSummary] = useState<MyProfileSummary | null>(null);
-  const [posts, setPosts] = useState<ProfileAlbumPost[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [posts, setPosts] = useState<ProfileViewPost[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    setError(null);
+    // ponytail: /api/me/summary は無いので、既存3本のAPIを1回のPromise.allで叩いて件数をここで組み立てる
+    Promise.all([getMe(), getMyPosts(), getMyFriends(), getMyReceivedFriendRequests()])
+      .then(([me, myPosts, friends, received]) => {
+        if (!me.handle) {
+          router.replace('/profile-setup');
+          return;
+        }
+        setProfile(me);
+        setSummary({ postsCount: myPosts.length, friendsCount: friends.length, pendingReceivedCount: received.length });
+        setPosts(
+          myPosts.map((post) => ({
+            id: String(post.id),
+            imageUri: post.imageUrl ? toAbsoluteApiUrl(post.imageUrl) : null,
+          })),
+        );
+      })
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) {
+          router.replace('/');
+          return;
+        }
+        setError('プロフィールを読み込めませんでした');
+      });
+  }, [router]);
 
   useEffect(() => {
-    getMe().then(setProfile);
-    getMyProfileSummary().then(setSummary);
-    getMyPosts().then(setPosts);
-  }, []);
+    load();
+  }, [load]);
+
+  if (error) {
+    return (
+      <YStack flex={1} backgroundColor="#000" justifyContent="center" alignItems="center" gap="$3" paddingHorizontal="$6">
+        <Text color="#fff" fontSize={15} textAlign="center">
+          {error}
+        </Text>
+      </YStack>
+    );
+  }
 
   if (!profile || !summary) {
     return (
