@@ -1,4 +1,4 @@
-import { createDb, friendships, images, pinEmojiEnum, posts, shops } from '@repo/db';
+import { bookmarks, createDb, friendships, images, pinEmojiEnum, posts, shops } from '@repo/db';
 import { and, eq, or } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { postFriendshipCondition } from '../lib/visibility';
@@ -16,6 +16,15 @@ const MAGIC: Array<{ bytes: number[]; mime: string }> = [
 
 const WEBP_RIFF = [0x52, 0x49, 0x46, 0x46]; // "RIFF"
 const WEBP_MARK = [0x57, 0x45, 0x42, 0x50]; // "WEBP" at offset 8
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    ('code' in error || 'cause' in error) &&
+    ((error as { code?: unknown }).code === '23505' || (error as { cause?: { code?: unknown } }).cause?.code === '23505')
+  );
+}
 
 const sniffMime = (buf: Uint8Array): string | null => {
   for (const { bytes, mime } of MAGIC) {
@@ -141,6 +150,37 @@ export const postsRoute = new Hono<Env>()
       },
     });
   })
+  .delete('/:id', requireAuth, async (c) => {
+    const user = c.get('user');
+    const rawId = Number(c.req.param('id'));
+    if (!Number.isInteger(rawId) || rawId <= 0) return c.json({ error: 'Invalid post id' }, 400);
+
+    const db = createDb(c.env.DATABASE_URL);
+
+    const [post] = await db
+      .select({ id: posts.id })
+      .from(posts)
+      .where(and(eq(posts.id, rawId), eq(posts.userId, user.id)));
+
+    if (!post) return c.json({ error: 'Not found' }, 404);
+
+    const [imageRow] = await db.select({ key: images.key }).from(images).where(eq(images.postId, post.id));
+
+    // images → posts の順で削除（FK set null 前に明示削除）
+    if (imageRow) await db.delete(images).where(eq(images.postId, post.id));
+    await db.delete(posts).where(eq(posts.id, post.id));
+
+    // R2はDB外。失敗してもDBは一貫している
+    if (imageRow?.key != null) {
+      try {
+        await c.env.IMAGES_BUCKET.delete(imageRow.key);
+      } catch (e) {
+        console.error('R2 delete failed, orphaned object:', imageRow.key, e);
+      }
+    }
+
+    return new Response(null, { status: 204 });
+  })
   .get('/:id', requireAuth, async (c) => {
     const authUser = c.get('user');
     const rawId = Number(c.req.param('id'));
@@ -157,6 +197,7 @@ export const postsRoute = new Hono<Env>()
         createdAt: posts.createdAt,
         updatedAt: posts.updatedAt,
         imageKey: images.key,
+        bookmarkId: bookmarks.id,
         shop: {
           id: shops.id,
           googlePlaceId: shops.googlePlaceId,
@@ -170,10 +211,54 @@ export const postsRoute = new Hono<Env>()
       .innerJoin(shops, eq(posts.shopId, shops.id))
       .leftJoin(images, eq(images.postId, posts.id))
       .leftJoin(friendships, postFriendshipCondition(authUser.id))
+      .leftJoin(bookmarks, and(eq(bookmarks.postId, posts.id), eq(bookmarks.userId, authUser.id)))
       .where(and(eq(posts.id, rawId), or(eq(posts.userId, authUser.id), eq(friendships.status, 'accepted'))));
 
     if (!row) return c.json({ error: 'Not found' }, 404);
 
-    const { imageKey, ...post } = row;
-    return c.json({ ...post, imageUrl: imageKey ? `/api/images/${imageKey}` : null });
+    const { imageKey, bookmarkId, ...post } = row;
+    return c.json({ ...post, imageUrl: imageKey ? `/api/images/${imageKey}` : null, isBookmarked: bookmarkId !== null });
+  })
+  .post('/:id/bookmark', requireAuth, async (c) => {
+    const authUser = c.get('user');
+    const rawId = Number(c.req.param('id'));
+    if (!Number.isInteger(rawId) || rawId <= 0) return c.json({ error: 'Invalid post id' }, 400);
+
+    const db = createDb(c.env.DATABASE_URL);
+
+    const [row] = await db
+      .select({ id: posts.id, bookmarkId: bookmarks.id })
+      .from(posts)
+      .leftJoin(friendships, postFriendshipCondition(authUser.id))
+      .leftJoin(bookmarks, and(eq(bookmarks.postId, posts.id), eq(bookmarks.userId, authUser.id)))
+      .where(and(eq(posts.id, rawId), or(eq(posts.userId, authUser.id), eq(friendships.status, 'accepted'))));
+
+    if (!row) return c.json({ error: 'Not found' }, 404);
+    if (row.bookmarkId !== null) return c.json({ error: 'Already bookmarked' }, 409);
+
+    try {
+      await db.insert(bookmarks).values({ userId: authUser.id, postId: rawId });
+    } catch (err) {
+      // 同時リクエストによる unique 制約違反(23505)は競合として 409 に変換する
+      if (isUniqueConstraintError(err)) return c.json({ error: 'Already bookmarked' }, 409);
+      throw err;
+    }
+
+    return c.json({ bookmarked: true }, 201);
+  })
+  .delete('/:id/bookmark', requireAuth, async (c) => {
+    const authUser = c.get('user');
+    const postId = Number(c.req.param('id'));
+    if (!Number.isInteger(postId) || postId <= 0) return c.json({ error: 'Invalid post id' }, 400);
+
+    const db = createDb(c.env.DATABASE_URL);
+
+    const [deleted] = await db
+      .delete(bookmarks)
+      .where(and(eq(bookmarks.userId, authUser.id), eq(bookmarks.postId, postId)))
+      .returning();
+
+    if (!deleted) return c.json({ error: 'Bookmark not found' }, 404);
+
+    return c.body(null, 204);
   });

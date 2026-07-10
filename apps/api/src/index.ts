@@ -6,6 +6,7 @@ import { imagesRoute } from './routes/images';
 import { me } from './routes/me';
 import { places } from './routes/places';
 import { postsRoute } from './routes/posts';
+import { shopsRoute } from './routes/shops';
 import { usersRoute } from './routes/users';
 import type { Env } from './types';
 
@@ -21,6 +22,7 @@ const app = new Hono<Env>()
   .use('/api/auth/*', apiCors)
   .use('/api/me', apiCors)
   .use('/api/places/*', apiCors)
+  .use('/api/shops/*', apiCors)
   .use('/api/posts/*', apiCors)
   .use('/api/friendships/*', apiCors)
   .use('/api/images/*', apiCors)
@@ -30,6 +32,7 @@ const app = new Hono<Env>()
   })
   .route('/api/me', me)
   .route('/api/places', places)
+  .route('/api/shops', shopsRoute)
   .route('/api/friendships', friendshipsRoute)
   .route('/api/posts', postsRoute)
   .route('/api/images', imagesRoute)

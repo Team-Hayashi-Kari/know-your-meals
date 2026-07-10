@@ -52,3 +52,32 @@ export async function searchPlaces(apiKey: string, params: { query: string; lat:
     photos: (p.photos ?? []).map((x) => x.name),
   }));
 }
+
+export async function getPlaceDetails(apiKey: string, googlePlaceId: string): Promise<PlaceResult | null> {
+  const response = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(googlePlaceId)}`, {
+    headers: {
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': 'id,displayName,formattedAddress,location',
+    },
+  });
+
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`Place Details API error: ${response.status}`);
+  }
+
+  const p = (await response.json()) as {
+    displayName?: { text?: string };
+    formattedAddress?: string;
+    location: { latitude: number; longitude: number };
+    id: string;
+  };
+
+  return {
+    name: p.displayName?.text ?? '',
+    address: p.formattedAddress ?? '',
+    location: { lat: p.location.latitude, lng: p.location.longitude },
+    placeId: p.id,
+    photos: [],
+  };
+}
