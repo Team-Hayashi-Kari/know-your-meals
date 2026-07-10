@@ -14,17 +14,13 @@ const actualDrizzleOrm = await import('drizzle-orm');
 const eqMock = mock((column: unknown, value: unknown) => ({ type: 'eq', column, value }));
 mock.module('drizzle-orm', () => ({ ...actualDrizzleOrm, eq: eqMock }));
 
-// visible post が存在するか（可視性判定の結果を表す）
-let mockVisiblePost: { id: number } | undefined = { id: 1 };
-// 既に bookmark が存在するか
-let mockExistingBookmark: { id: number } | undefined;
+// 見える投稿かどうか、既に bookmark 済みかどうかを 1 行で表す（実装は1クエリで両方を判定する）
+let mockRow: { id: number; bookmarkId: number | null } | undefined = { id: 1, bookmarkId: null };
 
-const postsWhereMock = mock(() => Promise.resolve(mockVisiblePost ? [mockVisiblePost] : []));
-const friendshipsLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ where: postsWhereMock }));
-const postsFromMock = mock((_table: unknown) => ({ leftJoin: friendshipsLeftJoinMock }));
-
-const bookmarksWhereMock = mock(() => Promise.resolve(mockExistingBookmark ? [mockExistingBookmark] : []));
-const bookmarksFromMock = mock((_table: unknown) => ({ where: bookmarksWhereMock }));
+const whereMock = mock(() => Promise.resolve(mockRow ? [mockRow] : []));
+const bookmarksLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ where: whereMock }));
+const friendshipsLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: bookmarksLeftJoinMock }));
+const fromMock = mock((_table: unknown) => ({ leftJoin: friendshipsLeftJoinMock }));
 
 const postsTable = { id: 'posts.id', userId: 'posts.userId' };
 const bookmarksTable = { id: 'bookmarks.id', userId: 'bookmarks.userId', postId: 'bookmarks.postId' };
@@ -35,9 +31,7 @@ const friendshipsTable = {
   status: 'friendships.status',
 };
 
-const selectMock = mock((_fields: unknown) => ({
-  from: mock((table: unknown) => (table === bookmarksTable ? bookmarksFromMock(table) : postsFromMock(table))),
-}));
+const selectMock = mock((_fields: unknown) => ({ from: fromMock }));
 
 let mockInsertError: (Error & { code?: string }) | null = null;
 const insertValuesMock = mock(async (_values: unknown) => {
@@ -64,16 +58,14 @@ function req(path: string, init?: RequestInit) {
 describe('POST /api/posts/:id/bookmark', () => {
   beforeEach(() => {
     mockSessionValue = { user: { id: 'user1', name: 'Test User', email: 'test@example.com' } };
-    mockVisiblePost = { id: 1 };
-    mockExistingBookmark = undefined;
+    mockRow = { id: 1, bookmarkId: null };
     mockInsertError = null;
     eqMock.mockClear();
     selectMock.mockClear();
-    postsFromMock.mockClear();
-    bookmarksFromMock.mockClear();
+    fromMock.mockClear();
     friendshipsLeftJoinMock.mockClear();
-    postsWhereMock.mockClear();
-    bookmarksWhereMock.mockClear();
+    bookmarksLeftJoinMock.mockClear();
+    whereMock.mockClear();
     insertMock.mockClear();
     insertValuesMock.mockClear();
   });
@@ -95,7 +87,7 @@ describe('POST /api/posts/:id/bookmark', () => {
   });
 
   it('存在しない投稿は 404 を返す', async () => {
-    mockVisiblePost = undefined;
+    mockRow = undefined;
 
     const res = await req('/api/posts/999/bookmark', { method: 'POST' });
 
@@ -105,7 +97,7 @@ describe('POST /api/posts/:id/bookmark', () => {
   it('見えない投稿は 404 を返す', async () => {
     // 非 friend の場合は SQL の where にマッチせず row が返らない想定
     mockSessionValue = { user: { id: 'user3', name: 'Stranger', email: 'stranger@example.com' } };
-    mockVisiblePost = undefined;
+    mockRow = undefined;
 
     const res = await req('/api/posts/1/bookmark', { method: 'POST' });
 
@@ -113,12 +105,20 @@ describe('POST /api/posts/:id/bookmark', () => {
   });
 
   it('見えない投稿では bookmark insert が走らない', async () => {
-    mockVisiblePost = undefined;
+    mockRow = undefined;
 
     await req('/api/posts/1/bookmark', { method: 'POST' });
 
-    expect(bookmarksFromMock).not.toHaveBeenCalled();
     expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it('可視性確認とbookmark確認を1クエリにまとめている（N+1回避）', async () => {
+    await req('/api/posts/1/bookmark', { method: 'POST' });
+
+    // select は可視性確認用に1回だけ呼ばれる（insert前チェックの追加select が無い）
+    expect(selectMock).toHaveBeenCalledTimes(1);
+    expect(bookmarksLeftJoinMock).toHaveBeenCalledTimes(1);
+    expect(bookmarksLeftJoinMock.mock.calls[0]?.[0]).toBe(bookmarksTable);
   });
 
   it('自分の投稿を初回保存でき、201 { bookmarked: true } を返す', async () => {
@@ -140,7 +140,7 @@ describe('POST /api/posts/:id/bookmark', () => {
   });
 
   it('既に保存済みなら 409 { error: "Already bookmarked" } を返す', async () => {
-    mockExistingBookmark = { id: 1 };
+    mockRow = { id: 1, bookmarkId: 5 };
 
     const res = await req('/api/posts/1/bookmark', { method: 'POST' });
     const body = await res.json();
@@ -170,6 +170,8 @@ describe('POST /api/posts/:id/bookmark', () => {
   });
 
   it('初回保存時は bookmarks に userId = authUser.id, postId = 対象投稿 id で insert される', async () => {
+    mockRow = { id: 42, bookmarkId: null };
+
     await req('/api/posts/42/bookmark', { method: 'POST' });
 
     expect(insertMock).toHaveBeenCalledWith(bookmarksTable);
