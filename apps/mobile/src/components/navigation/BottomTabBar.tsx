@@ -86,6 +86,9 @@ export function BottomTabBar() {
               // 現在アクティブなタブを再タップしても同じ画面を履歴に積み増さないよう何もしない
               onPress={() => {
                 if (active) return;
+                // 遷移後もこのボタンがDOMフォーカスを保持したままだと、
+                // 現在画面がスタックでaria-hidden化された際にブラウザ警告が出るため事前にblurする
+                (document.activeElement as HTMLElement | null)?.blur();
                 router.push(route);
               }}
               hitSlop={10}
