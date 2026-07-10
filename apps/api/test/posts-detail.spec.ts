@@ -23,6 +23,7 @@ type PostRow =
       createdAt: Date;
       updatedAt: Date;
       imageKey: string | null;
+      bookmarkId: number | null;
       shop: {
         id: number;
         googlePlaceId: string;
@@ -42,6 +43,7 @@ let mockPostRow: PostRow = {
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T01:00:00Z'),
   imageKey: 'user1/some-uuid',
+  bookmarkId: null,
   shop: {
     id: 10,
     googlePlaceId: 'place-1',
@@ -52,10 +54,11 @@ let mockPostRow: PostRow = {
   },
 };
 
-// 単一クエリ (select().from(posts).innerJoin(shops).leftJoin(images).leftJoin(friendships).where()) を模す。
+// 単一クエリ (select().from(posts).innerJoin(shops).leftJoin(images).leftJoin(friendships).leftJoin(bookmarks).where()) を模す。
 // visibility は SQL の where 側で判定される想定なので、mockPostRow の有無だけで「見える/見えない」を表現する。
 const postWhereMock = mock(() => Promise.resolve(mockPostRow ? [mockPostRow] : []));
-const friendshipsLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ where: postWhereMock }));
+const bookmarksLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ where: postWhereMock }));
+const friendshipsLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: bookmarksLeftJoinMock }));
 const imagesLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: friendshipsLeftJoinMock }));
 const innerJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: imagesLeftJoinMock }));
 
@@ -88,6 +91,7 @@ mock.module('@repo/db', () => ({
   shops: { id: 'shops.id', googlePlaceId: 'shops.googlePlaceId', name: 'shops.name', address: 'shops.address', lat: 'shops.lat', lng: 'shops.lng' },
   images: { postId: 'images.postId', key: 'images.key' },
   friendships: friendshipsTable,
+  bookmarks: { id: 'bookmarks.id', postId: 'bookmarks.postId', userId: 'bookmarks.userId' },
 }));
 
 const { default: app } = await import('../src/index');
@@ -107,6 +111,7 @@ describe('GET /api/posts/:id', () => {
       createdAt: new Date('2026-01-01T00:00:00Z'),
       updatedAt: new Date('2026-01-01T01:00:00Z'),
       imageKey: 'user1/some-uuid',
+      bookmarkId: null,
       shop: { id: 10, googlePlaceId: 'place-1', name: 'Test Shop', address: '東京都渋谷区1-2-3', lat: 35.68, lng: 139.76 },
     };
     eqMock.mockClear();
@@ -114,6 +119,7 @@ describe('GET /api/posts/:id', () => {
     innerJoinMock.mockClear();
     imagesLeftJoinMock.mockClear();
     friendshipsLeftJoinMock.mockClear();
+    bookmarksLeftJoinMock.mockClear();
     postWhereMock.mockClear();
   });
 
@@ -207,5 +213,43 @@ describe('GET /api/posts/:id', () => {
     // where句に本人条件と accepted friend 条件が含まれている
     expect(eqMock).toHaveBeenCalledWith('posts.userId', 'user1');
     expect(eqMock).toHaveBeenCalledWith('friendships.status', 'accepted');
+  });
+
+  it('bookmark 済みの投稿では isBookmarked: true を返す', async () => {
+    mockPostRow = { ...(mockPostRow as NonNullable<PostRow>), bookmarkId: 5 };
+
+    const res = await req('/api/posts/1');
+    const body = (await res.json()) as { isBookmarked: boolean };
+
+    expect(res.status).toBe(200);
+    expect(body.isBookmarked).toBe(true);
+  });
+
+  it('bookmark していない投稿では isBookmarked: false を返す', async () => {
+    const res = await req('/api/posts/1');
+    const body = (await res.json()) as { isBookmarked: boolean };
+
+    expect(res.status).toBe(200);
+    expect(body.isBookmarked).toBe(false);
+  });
+
+  it('見えない投稿は 404 のままで bookmark 状態は漏れない', async () => {
+    mockSessionValue = { user: { id: 'user3', name: 'Stranger', email: 'stranger@example.com' } };
+    mockPostRow = undefined;
+
+    const res = await req('/api/posts/1');
+    const body = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(body).not.toHaveProperty('isBookmarked');
+  });
+
+  it('leftJoin(bookmarks, ...) が userId/postId 条件で実行されている', async () => {
+    await req('/api/posts/1');
+
+    expect(bookmarksLeftJoinMock).toHaveBeenCalledTimes(1);
+    expect(bookmarksLeftJoinMock.mock.calls[0]?.[0]).toEqual({ id: 'bookmarks.id', postId: 'bookmarks.postId', userId: 'bookmarks.userId' });
+    expect(eqMock).toHaveBeenCalledWith('bookmarks.postId', 'posts.id');
+    expect(eqMock).toHaveBeenCalledWith('bookmarks.userId', 'user1');
   });
 });
