@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { type CameraType, CameraView, type FlashMode, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -15,6 +16,14 @@ async function uriToBlob(uri: string): Promise<Blob> {
 export default function CameraScreen() {
   const router = useRouter();
   const cameraRef = useRef<CameraView>(null);
+
+  const handleCancel = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/home');
+    }
+  };
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<FlashMode>('off');
@@ -70,9 +79,9 @@ export default function CameraScreen() {
 
   return (
     <CameraView ref={cameraRef} style={{ flex: 1, backgroundColor: '#000' }} facing={facing} flash={flash}>
-      <YStack flex={1} justifyContent="space-between">
+      <YStack flex={1} zIndex={1}>
         <XStack justifyContent="space-between" alignItems="center" paddingHorizontal="$5" paddingTop="$5">
-          <Pressable onPress={() => router.back()} hitSlop={12} accessibilityRole="button" accessibilityLabel="キャンセル">
+          <Pressable onPress={handleCancel} hitSlop={12} accessibilityRole="button" accessibilityLabel="キャンセル">
             <YStack width={38} height={38} borderRadius={19} backgroundColor="rgba(0,0,0,0.4)" justifyContent="center" alignItems="center">
               <Text color="#fff" fontSize={20}>
                 ✕
@@ -103,45 +112,50 @@ export default function CameraScreen() {
           </Pressable>
         </XStack>
 
-        <YStack alignItems="center" paddingBottom="$3">
-          <XStack alignItems="center" gap="$2">
-            <Text color="#fff" fontSize={13} fontWeight="700">
-              撮影
-            </Text>
-            <Text color="#666" fontSize={13}>
-              ・
-            </Text>
-            <Pressable onPress={handlePickLibrary} accessibilityRole="button" accessibilityLabel="ライブラリから選ぶ">
-              <Text color="#888" fontSize={13} fontWeight="700">
-                ライブラリ
+        <YStack flex={1} />
+
+        <YStack>
+          <YStack alignItems="center" paddingBottom="$3">
+            <XStack alignItems="center" gap="$2">
+              <Text color="#fff" fontSize={13} fontWeight="700">
+                撮影
               </Text>
+              <Text color="#666" fontSize={13}>
+                ・
+              </Text>
+              <Pressable onPress={handlePickLibrary} accessibilityRole="button" accessibilityLabel="ライブラリから選ぶ">
+                <Text color="#fff" fontSize={13} fontWeight="700">
+                  ライブラリ
+                </Text>
+              </Pressable>
+            </XStack>
+          </YStack>
+
+          <XStack justifyContent="space-between" alignItems="center" paddingHorizontal={40} paddingBottom={44}>
+            <Pressable onPress={handlePickLibrary} accessibilityRole="button" accessibilityLabel="ライブラリを開く">
+              <YStack width={48} height={48} borderRadius={12} borderWidth={1} borderColor="#333" backgroundColor="#111" />
+            </Pressable>
+            <Pressable onPress={handleCapture} disabled={busy} accessibilityRole="button" accessibilityLabel="シャッター">
+              <YStack
+                width={74}
+                height={74}
+                borderRadius={37}
+                borderWidth={4}
+                borderColor="rgba(255,255,255,0.35)"
+                justifyContent="center"
+                alignItems="center"
+                opacity={busy ? 0.6 : 1}
+              >
+                <YStack width={58} height={58} borderRadius={29} backgroundColor="#fff" />
+              </YStack>
+            </Pressable>
+            <Pressable onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))} accessibilityRole="button" accessibilityLabel="カメラ反転">
+              <YStack width={48} height={48} borderRadius={24} backgroundColor="rgba(0,0,0,0.4)" justifyContent="center" alignItems="center">
+                <Ionicons name="camera-reverse-outline" size={22} color="#fff" />
+              </YStack>
             </Pressable>
           </XStack>
         </YStack>
-
-        <XStack justifyContent="space-between" alignItems="center" paddingHorizontal={40} paddingBottom={44}>
-          <Pressable onPress={handlePickLibrary} accessibilityRole="button" accessibilityLabel="ライブラリを開く">
-            <YStack width={48} height={48} borderRadius={12} borderWidth={1} borderColor="#333" backgroundColor="#111" />
-          </Pressable>
-          <Pressable onPress={handleCapture} disabled={busy} accessibilityRole="button" accessibilityLabel="シャッター">
-            <YStack
-              width={74}
-              height={74}
-              borderRadius={37}
-              backgroundColor="#fff"
-              borderWidth={4}
-              borderColor="rgba(255,255,255,0.35)"
-              opacity={busy ? 0.6 : 1}
-            />
-          </Pressable>
-          <Pressable onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))} accessibilityRole="button" accessibilityLabel="カメラ反転">
-            <YStack width={48} height={48} borderRadius={24} backgroundColor="rgba(0,0,0,0.4)" justifyContent="center" alignItems="center">
-              <Text color="#fff" fontSize={18}>
-                🔄
-              </Text>
-            </YStack>
-          </Pressable>
-        </XStack>
       </YStack>
     </CameraView>
   );
