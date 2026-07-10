@@ -15,7 +15,7 @@ export function createAuth(env: Bindings) {
         clientSecret: env.GOOGLE_CLIENT_SECRET,
       },
     },
-    trustedOrigins: ['exp://', 'knowyourmeals://', 'http://localhost:8081'],
+    trustedOrigins: ['exp://', 'http://localhost:8081', 'https://know-your-meals.pages.dev'],
     plugins: [expo()],
   });
 }

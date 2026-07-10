@@ -11,7 +11,12 @@ import { usersRoute } from './routes/users';
 import type { Env } from './types';
 
 const apiCors = cors({
-  origin: ['knowyourmeals://', 'exp://', 'http://localhost:8081'],
+  origin: (origin) => {
+    const allowed = ['http://localhost:8081', 'https://know-your-meals.pages.dev'];
+    if (!origin) return null;
+    if (allowed.includes(origin) || origin.startsWith('exp://')) return origin;
+    return null;
+  },
   allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'expo-origin'],
   credentials: true,
