@@ -1,9 +1,12 @@
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image as RNImage } from 'react-native';
-import { Button, Input, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
-import { updateMe } from '../lib/mock-api';
+import * as ImagePicker from 'expo-image-picker';
+import { Button, Input, ScrollView, Spinner, Text, TextArea, XStack, YStack } from 'tamagui';
+import { checkHandleAvailable, updateMe } from '../lib/mock-api';
+
+const NAME_MAX = 20;
+const HANDLE_MAX = 15;
 
 export default function ProfileSetupScreen() {
   const router = useRouter();
@@ -13,6 +16,46 @@ export default function ProfileSetupScreen() {
   const [bio, setBio] = useState('');
   const [saving, setSaving] = useState(false);
   const [image, setImage] = useState<string | null>(null);
+
+  // ID重複チェックの状態
+  // 'idle'（未入力）/ 'checking'（確認中）/ 'available'（使える）/ 'taken'（使われている）
+  const [handleStatus, setHandleStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+
+  // 「次へ」を押したあとのエラー表示用
+  const [nameError, setNameError] = useState('');
+  const [handleError, setHandleError] = useState('');
+
+  // リアルタイムの文字数
+  const nameCount = countChars(name.trim());
+  const handleCount = countChars(handle.trim());
+
+  // IDに使える文字かどうか（半角英数字・アンダースコア・ドットのみ）
+  const isHandleFormatValid = (h: string) => /^[a-zA-Z0-9_.]+$/.test(h);
+
+  // handle が変わるたびに、少し待ってから空き状況をチェック
+  useEffect(() => {
+    const trimmed = handle.trim();
+    // 文字を打ち直したらエラー表示は一旦消す
+    setHandleError('');
+
+    if (!trimmed) {
+      setHandleStatus('idle');
+      return;
+    }
+    // 使えない文字・文字数オーバーなら重複チェックはしない
+    if (!isHandleFormatValid(trimmed) || countChars(trimmed) > HANDLE_MAX) {
+      setHandleStatus('idle');
+      return;
+    }
+    setHandleStatus('checking');
+    // 入力が止まってから300ミリ秒後にチェック（打つたびに連発しないように）
+    const timer = setTimeout(() => {
+      checkHandleAvailable(trimmed).then((ok) => {
+        setHandleStatus(ok ? 'available' : 'taken');
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [handle]);
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -28,10 +71,50 @@ export default function ProfileSetupScreen() {
   };
 
   const handleNext = async () => {
+    // まずエラーをリセット
+    setNameError('');
+    setHandleError('');
+
+    const trimmedName = name.trim();
+    const trimmedHandle = handle.trim();
+    let hasError = false;
+
+    // 名前チェック
+    if (!trimmedName) {
+      setNameError('名前を入力してください');
+      hasError = true;
+    } else if (countChars(trimmedName) > NAME_MAX) {
+      setNameError(`名前は${NAME_MAX}文字以内で入力してください`);
+      hasError = true;
+    }
+
+    // IDチェック
+    if (!trimmedHandle) {
+      setHandleError('ユーザーIDを入力してください');
+      hasError = true;
+    } else if (!isHandleFormatValid(trimmedHandle)) {
+      setHandleError('IDは半角の英数字・記号（_ .）のみ使えます');
+      hasError = true;
+    } else if (countChars(trimmedHandle) > HANDLE_MAX) {
+      setHandleError(`IDは${HANDLE_MAX}文字以内で入力してください`);
+      hasError = true;
+    } else if (handleStatus === 'taken') {
+      setHandleError('このIDは使われています');
+      hasError = true;
+    } else if (handleStatus === 'checking') {
+      setHandleError('ID確認中です。少し待ってください');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
     setSaving(true);
     try {
-      await updateMe({ name, handle, bio, image });
+      // 保存時は @ を付けずに素のIDを渡す
+      console.log('保存するbio:', JSON.stringify(bio));
+      await updateMe({ name: trimmedName, handle: trimmedHandle, bio, image });
       router.replace('/find-friends');
+
     } catch (e) {
       console.error('[プロフィール保存エラー]', e);
       setSaving(false);
@@ -50,136 +133,83 @@ export default function ProfileSetupScreen() {
       }}
     >
       <XStack justifyContent="space-between" alignItems="center" marginBottom="$6">
-        <Text color="#555" fontSize={13} fontWeight="600">
-          ステップ 1 / 2
-        </Text>
-        <Text color="#555" fontSize={13} fontWeight="600" onPress={() => router.replace('/home')}>
-          スキップ
-        </Text>
+        <Text color="#555" fontSize={13} fontWeight="600">ステップ 1 / 2</Text>
+        <Text color="#555" fontSize={13} fontWeight="600" onPress={() => router.replace('/home')}>スキップ</Text>
       </XStack>
 
-      <Text color="#fff" fontSize={32} fontWeight="800" lineHeight={38} marginBottom="$6">
-        プロフィールを{'\n'}設定しよう
-      </Text>
+      <Text color="#fff" fontSize={32} fontWeight="800" lineHeight={38} marginBottom="$6">プロフィールを{'\n'}設定しよう</Text>
 
       <YStack alignItems="center" marginBottom="$8">
         <YStack width={96} height={96} position="relative" onPress={handlePickImage} pressStyle={{ opacity: 0.8 }}>
-          <YStack
-            width={96}
-            height={96}
-            borderRadius={48}
-            backgroundColor={image ? '#1a1a1a' : getColorFromName(name)}
-            justifyContent="center"
-            alignItems="center"
-            overflow="hidden"
-          >
+          <YStack width={96} height={96} borderRadius={48} backgroundColor={image ? '#1a1a1a' : getColorFromName(name)} justifyContent="center" alignItems="center" overflow="hidden">
             {image ? (
               <RNImage source={{ uri: image }} style={{ width: 96, height: 96 }} resizeMode="cover" />
             ) : (
-              <Text color="#fff" fontSize={40} fontWeight="700">
-                {getInitial(name)}
-              </Text>
+              <Text color="#fff" fontSize={40} fontWeight="700">{getInitial(name)}</Text>
             )}
           </YStack>
 
-          <YStack
-            position="absolute"
-            bottom={0}
-            right={0}
-            width={30}
-            height={30}
-            borderRadius={15}
-            backgroundColor="#ffd400"
-            justifyContent="center"
-            alignItems="center"
-            borderWidth={3}
-            borderColor="#000"
-          >
-            <Text color="#000" fontSize={16} fontWeight="700" lineHeight={16}>
-              +
-            </Text>
+          <YStack position="absolute" bottom={0} right={0} width={30} height={30} borderRadius={15} backgroundColor="#ffd400" justifyContent="center" alignItems="center" borderWidth={3} borderColor="#000">
+            <Text color="#000" fontSize={16} fontWeight="700" lineHeight={16}>+</Text>
           </YStack>
         </YStack>
       </YStack>
 
       <YStack gap="$2" marginBottom="$4">
-        <Text color="#555" fontSize={14} fontWeight="600">
-          名前
-        </Text>
-        <Input
-          value={name}
-          onChangeText={setName}
-          placeholder="田中 ゆき"
-          placeholderTextColor="$gray9"
-          backgroundColor="#1a1a1a"
-          borderWidth={0}
-          color="#fff"
-          height={52}
-          fontSize={16}
-          borderRadius="$4"
-        />
+        <XStack justifyContent="space-between" alignItems="center">
+          <Text color="#555" fontSize={14} fontWeight="600">名前</Text>
+          <Text color={nameCount > NAME_MAX ? '#ff4444' : '#555'} fontSize={13}>{nameCount}/{NAME_MAX}</Text>
+        </XStack>
+        <Input value={name} onChangeText={setName} placeholder="田中 ゆき" placeholderTextColor="$gray9" backgroundColor="#1a1a1a" borderWidth={0} color="#fff" height={52} fontSize={16} borderRadius="$4" />
+        {nameError !== '' && <Text color="#ff4444" fontSize={13}>{nameError}</Text>}
       </YStack>
 
       <YStack gap="$2" marginBottom="$4">
-        <Text color="#555" fontSize={14} fontWeight="600">
-          ユーザーID
-        </Text>
-        <Input
-          value={handle}
-          onChangeText={setHandle}
-          placeholder="@yuki_eats"
-          placeholderTextColor="$gray9"
-          backgroundColor="#1a1a1a"
-          borderWidth={0}
-          color="#fff"
-          height={52}
-          fontSize={16}
-          borderRadius="$4"
-          autoCapitalize="none"
-        />
+        <XStack justifyContent="space-between" alignItems="center">
+          <Text color="#555" fontSize={14} fontWeight="600">ユーザーID</Text>
+          <Text color={handleCount > HANDLE_MAX ? '#ff4444' : '#555'} fontSize={13}>{handleCount}/{HANDLE_MAX}</Text>
+        </XStack>
+        {/* @ を左に固定し、ユーザーは @ を除いた部分だけ入力 */}
+        <XStack alignItems="center" backgroundColor="#1a1a1a" borderRadius="$4" height={52} paddingLeft="$3">
+          <Text color="#888" fontSize={16} fontWeight="600">@</Text>
+          <Input flex={1} value={handle} onChangeText={setHandle} placeholder="yuki_eats" placeholderTextColor="$gray9" backgroundColor="transparent" borderWidth={0} color="#fff" height={52} fontSize={16} autoCapitalize="none" />
+        </XStack>
+        {/* ID重複チェックの表示 */}
+        {handleStatus === 'checking' && <Text color="#888" fontSize={13}>確認中…</Text>}
+        {handleStatus === 'available' && <Text color="#2ecc71" fontSize={13}>✓ このIDは使えます</Text>}
+        {handleStatus === 'taken' && <Text color="#ff4444" fontSize={13}>✗ このIDは使われています</Text>}
+        {/* 次へを押したときのエラー（形式NG・文字数オーバーなど） */}
+        {handleError !== '' && <Text color="#ff4444" fontSize={13}>{handleError}</Text>}
       </YStack>
 
       <YStack gap="$2" marginBottom="$6">
-        <Text color="#555" fontSize={14} fontWeight="600">
-          自己紹介
-        </Text>
-        <Input
+        <Text color="#555" fontSize={14} fontWeight="600">自己紹介</Text>
+        <TextArea
           value={bio}
           onChangeText={setBio}
-          placeholder="ラーメンとカフェ巡りが好き。週末は新店開拓。"
+          placeholder={'ラーメンとカフェ巡りが好き。\n週末は新店開拓。'}
           placeholderTextColor="$gray9"
           backgroundColor="#1a1a1a"
           borderWidth={0}
           color="#fff"
-          height={100}
+          minHeight={100}
           fontSize={16}
+          lineHeight={22}
           borderRadius="$4"
-          multiline
-          textAlignVertical="top"
-          paddingTop="$3"
+          padding="$3"
         />
       </YStack>
 
-      <Button
-        onPress={handleNext}
-        disabled={saving}
-        backgroundColor="#fff"
-        pressStyle={{ backgroundColor: '#e8e8e8', scale: 0.97 }}
-        disabledStyle={{ opacity: 0.5 }}
-        borderRadius="$5"
-        height={60}
-        marginTop="$4"
-      >
-        {saving ? (
-          <Spinner color="#000" />
-        ) : (
-          <Text color="#000" fontWeight="700" fontSize={16}>
-            次へ
-          </Text>
-        )}
+      <Button onPress={handleNext} disabled={saving} backgroundColor="#fff" pressStyle={{ backgroundColor: '#e8e8e8', scale: 0.97 }} disabledStyle={{ opacity: 0.5 }} borderRadius="$5" height={60} marginTop="$4">
+        {saving ? <Spinner color="#000" /> : <Text color="#000" fontWeight="700" fontSize={16}>次へ</Text>}
       </Button>
     </ScrollView>
   );
+}
+
+// 見た目どおりに文字数を数える（絵文字を1文字として数える）
+function countChars(str: string): number {
+  return [...str].length;
 }
 
 function getInitial(name: string): string {
