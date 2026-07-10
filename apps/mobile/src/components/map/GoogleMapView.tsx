@@ -60,10 +60,9 @@ function useGoogleMapsConsoleError(): string | null {
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-// Google Cloud Console側で発行するMap ID。AdvancedMarker（カスタムピン表示）に必要。
-// 未発行の間は、Google公式が検証用に提供している 'DEMO_MAP_ID' にフォールバックする。
+// Google Cloud Console側で発行済みのMap ID。AdvancedMarker（カスタムピン表示）に必要。
 // 参照: https://developers.google.com/maps/documentation/javascript/advanced-markers/migration
-const MAP_ID = process.env.EXPO_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID';
+const MAP_ID = process.env.EXPO_PUBLIC_GOOGLE_MAPS_MAP_ID; // || 'DEMO_MAP_ID'（Google公式の検証用ID。未発行時のフォールバックとして必要になれば戻す）
 
 type GoogleMapViewProps = {
   center: { lat: number; lng: number };
