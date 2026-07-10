@@ -81,11 +81,12 @@ export default function PostDetailScreen() {
           <>
             {/* メニュー外タップで閉じる（画面全体を覆う透明レイヤー） */}
             {/* biome-ignore lint/suspicious/noExplicitAny: RNWのみのposition値'fixed'を使うため */}
-            <Pressable onPress={() => setMenuOpen(false)} style={{ position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0 }} />
+            <Pressable onPress={() => setMenuOpen(false)} style={{ position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }} />
             <YStack
               position="absolute"
               top={48}
               right="$5"
+              zIndex={11}
               backgroundColor="#151517"
               borderWidth={1}
               borderColor="#2a2a2a"
