@@ -33,5 +33,16 @@ jobs:
             actions: read
           use_sticky_comment: true
           show_full_output: true
-          claude_args: '--allowedTools "Bash(gh pr *),Bash(gh api *),Read,Glob,Grep"'
-          prompt: 'このPRのコードをレビューしてください。変更内容の概要、潜在的な問題点、改善提案をまとめてください。'
+          claude_args: '--allowedTools "Bash(gh pr *),Bash(gh api *),Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment"'
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            このPRのコードをレビューしてください。変更内容の概要、潜在的な問題点、改善提案をまとめてください。
+
+            Note: The PR branch is already checked out in the current working directory.
+
+            レビュー結果は必ずGitHubへの操作として反映してください。回答をチャットのメッセージとして返すだけでは何も投稿されません。
+            - 重大な問題（バグ、セキュリティ上の懸念など）が無ければ、`gh pr review ${{ github.event.pull_request.number }} --approve --body "..."` を実行してPRを承認してください。
+            - 問題点や改善提案がある場合は、承認はせずに `gh pr comment ${{ github.event.pull_request.number }} --body "..."` でレビュー内容をトップレベルコメントとして投稿してください。
+            - 特定のコード行への指摘があれば `mcp__github_inline_comment__create_inline_comment`（`confirmed: true`）で該当行にコメントしてください。
