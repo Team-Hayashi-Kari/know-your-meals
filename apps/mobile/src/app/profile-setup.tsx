@@ -4,7 +4,9 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image as RNImage } from 'react-native';
 import { Button, Input, ScrollView, Spinner, Text, TextArea, XStack, YStack } from 'tamagui';
-import { checkHandleAvailable, updateMe } from '../lib/mock-api';
+import { updateMe } from '../lib/api';
+import { ApiError } from '../lib/api-client';
+import { checkHandleAvailable } from '../lib/mock-api';
 
 const NAME_MAX = 20;
 const HANDLE_MAX = 15;
@@ -22,6 +24,7 @@ export default function ProfileSetupScreen() {
 
   const [nameError, setNameError] = useState('');
   const [handleError, setHandleError] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   const nameCount = countChars(name.trim());
   const handleCount = countChars(handle.trim());
@@ -63,6 +66,7 @@ export default function ProfileSetupScreen() {
   const handleNext = async () => {
     setNameError('');
     setHandleError('');
+    setSaveError('');
 
     const trimmedName = name.trim();
     const trimmedHandle = handle.trim();
@@ -80,7 +84,7 @@ export default function ProfileSetupScreen() {
       setHandleError('ユーザーIDを入力してください');
       hasError = true;
     } else if (!isHandleFormatValid(trimmedHandle)) {
-      setHandleError('IDは半角の英数字・記号（_ .）のみ使えます');
+      setHandleError('IDは半角の英数字・記号（_）のみ使えます');
       hasError = true;
     } else if (countChars(trimmedHandle) > HANDLE_MAX) {
       setHandleError(`IDは${HANDLE_MAX}文字以内で入力してください`);
@@ -97,10 +101,20 @@ export default function ProfileSetupScreen() {
 
     setSaving(true);
     try {
-      await updateMe({ name: trimmedName, handle: trimmedHandle, bio, image });
+      await updateMe({
+        name: trimmedName,
+        handle: trimmedHandle,
+        bio,
+        ...(image?.startsWith('http://') || image?.startsWith('https://') ? { image } : {}),
+      });
       router.replace('/find-friends');
     } catch (e) {
       console.error('[プロフィール保存エラー]', e);
+      if (e instanceof ApiError && e.status === 409) {
+        setHandleError('このIDは使われています');
+      } else {
+        setSaveError('プロフィールの保存に失敗しました');
+      }
       setSaving(false);
     }
   };
@@ -263,6 +277,12 @@ export default function ProfileSetupScreen() {
         />
       </YStack>
 
+      {saveError !== '' && (
+        <Text color="#ff4444" fontSize={13} marginBottom="$3">
+          {saveError}
+        </Text>
+      )}
+
       <Button
         onPress={handleNext}
         disabled={saving}
@@ -290,5 +310,5 @@ function countChars(str: string): number {
 }
 
 function isHandleFormatValid(h: string): boolean {
-  return /^[a-zA-Z0-9_.]+$/.test(h);
+  return /^[a-zA-Z0-9_]+$/.test(h);
 }
