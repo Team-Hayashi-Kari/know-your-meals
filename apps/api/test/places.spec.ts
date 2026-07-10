@@ -16,7 +16,7 @@ const mockSearchPlaces = mock<(apiKey: string, params: { query: string; lat: num
   Promise.resolve([]),
 );
 
-mock.module('../src/lib/places', () => ({ searchPlaces: mockSearchPlaces }));
+mock.module('../src/lib/places', () => ({ searchPlaces: mockSearchPlaces, getPlaceDetails: mock(() => Promise.resolve(null)) }));
 
 const { default: app } = await import('../src/index');
 

@@ -141,6 +141,37 @@ export const postsRoute = new Hono<Env>()
       },
     });
   })
+  .delete('/:id', requireAuth, async (c) => {
+    const user = c.get('user');
+    const rawId = Number(c.req.param('id'));
+    if (!Number.isInteger(rawId) || rawId <= 0) return c.json({ error: 'Invalid post id' }, 400);
+
+    const db = createDb(c.env.DATABASE_URL);
+
+    const [post] = await db
+      .select({ id: posts.id })
+      .from(posts)
+      .where(and(eq(posts.id, rawId), eq(posts.userId, user.id)));
+
+    if (!post) return c.json({ error: 'Not found' }, 404);
+
+    const [imageRow] = await db.select({ key: images.key }).from(images).where(eq(images.postId, post.id));
+
+    // images → posts の順で削除（FK set null 前に明示削除）
+    if (imageRow) await db.delete(images).where(eq(images.postId, post.id));
+    await db.delete(posts).where(eq(posts.id, post.id));
+
+    // R2はDB外。失敗してもDBは一貫している
+    if (imageRow?.key != null) {
+      try {
+        await c.env.IMAGES_BUCKET.delete(imageRow.key);
+      } catch (e) {
+        console.error('R2 delete failed, orphaned object:', imageRow.key, e);
+      }
+    }
+
+    return new Response(null, { status: 204 });
+  })
   .get('/:id', requireAuth, async (c) => {
     const authUser = c.get('user');
     const rawId = Number(c.req.param('id'));
