@@ -20,6 +20,12 @@ export type UserSearchResult = {
   relationshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'friends';
 };
 
+export type SentFriendRequest = {
+  friendshipId: number;
+  requestedAt: string;
+  user: Pick<UserSearchResult, 'id' | 'name' | 'handle' | 'image'>;
+};
+
 // ---- 仮データ（本物のDBの代わり） ----
 let mockMe: MeProfile = {
   id: 'mock-user-1',
@@ -34,6 +40,21 @@ const mockUsers: UserSearchResult[] = [
   { id: 'u2', name: 'Ryo Sato', handle: 'ryo.food', image: null, relationshipStatus: 'none' },
   { id: 'u3', name: 'Aoi', handle: 'aoi_gohan', image: null, relationshipStatus: 'none' },
   { id: 'u4', name: 'Takumi', handle: 'tkm.eats', image: null, relationshipStatus: 'none' },
+];
+
+let nextFriendshipId = 2;
+
+const mockSentFriendRequests: SentFriendRequest[] = [
+  {
+    friendshipId: 1,
+    requestedAt: '2026-07-08T09:30:00+09:00',
+    user: {
+      id: 'u1',
+      name: 'Yuki Tanaka',
+      handle: 'yuki_eats',
+      image: null,
+    },
+  },
 ];
 
 function delay(ms: number) {
@@ -83,7 +104,39 @@ export async function checkHandleAvailable(handle: string): Promise<boolean> {
 export async function sendFriendRequest(userId: string): Promise<void> {
   await delay(300);
   const target = mockUsers.find((u) => u.id === userId);
-  if (target) target.relationshipStatus = 'pending_sent';
+  if (!target) return;
+  if (target.relationshipStatus === 'pending_sent') return;
+
+  target.relationshipStatus = 'pending_sent';
+  mockSentFriendRequests.unshift({
+    friendshipId: nextFriendshipId,
+    requestedAt: new Date().toISOString(),
+    user: {
+      id: target.id,
+      name: target.name,
+      handle: target.handle,
+      image: target.image,
+    },
+  });
+  nextFriendshipId += 1;
+}
+
+// GET /api/me/friend-requests?direction=sent 相当
+export async function getSentFriendRequests(): Promise<SentFriendRequest[]> {
+  await delay(200);
+  return [...mockSentFriendRequests].sort((a, b) => (a.requestedAt < b.requestedAt ? 1 : -1));
+}
+
+// DELETE /api/friendships/:id 相当
+export async function cancelFriendRequest(friendshipId: number): Promise<void> {
+  await delay(300);
+  const index = mockSentFriendRequests.findIndex((request) => request.friendshipId === friendshipId);
+  if (index === -1) return;
+  const [request] = mockSentFriendRequests.splice(index, 1);
+  const target = mockUsers.find((u) => u.id === request.user.id);
+  if (target && target.relationshipStatus === 'pending_sent') {
+    target.relationshipStatus = 'none';
+  }
 }
 
 // pinEmojiEnum (packages/db/src/schema/content.ts) と揃える
