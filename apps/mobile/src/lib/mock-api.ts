@@ -62,6 +62,13 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
   return mockUsers.filter((u) => u.handle.includes(q) || u.name.toLowerCase().includes(q));
 }
 
+// GET /api/users/suggestions 相当（おすすめフレンド）
+export async function getSuggestedUsers(): Promise<UserSearchResult[]> {
+  await delay(300);
+  // まだフレンドでない人をおすすめとして返す
+  return mockUsers.filter((u) => u.relationshipStatus === 'none');
+}
+
 // GET /api/users/check-handle?handle= 相当
 // そのIDが使えるか（他の人に使われていないか）を返す
 export async function checkHandleAvailable(handle: string): Promise<boolean> {
