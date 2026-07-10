@@ -24,6 +24,9 @@ export default function HomeScreen() {
       <Text color="#fff" fontSize={24} fontWeight="700">
         ホーム
       </Text>
+      <Text color="#ffd400" fontSize={14} fontWeight="700" onPress={() => router.push('/profile-edit')}>
+        プロフィール編集
+      </Text>
       <Text color="#555" fontSize={14}>
         {session?.user?.email ?? ''}
       </Text>
