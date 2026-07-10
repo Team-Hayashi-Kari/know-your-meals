@@ -11,6 +11,7 @@ mock.module('../src/lib/auth', () => ({
 }));
 
 const REQUEST_FROM_USER2 = {
+  friendshipId: 501,
   requester: {
     id: 'user2',
     handle: 'friend-a',
@@ -19,9 +20,11 @@ const REQUEST_FROM_USER2 = {
     bio: 'ramen',
     email: 'friend-a@example.com',
   },
+  mutualFriendCount: 3,
 };
 
 const REQUEST_FROM_USER3 = {
+  friendshipId: 502,
   requester: {
     id: 'user3',
     handle: 'friend-b',
@@ -30,6 +33,7 @@ const REQUEST_FROM_USER3 = {
     bio: 'sushi',
     email: 'friend-b@example.com',
   },
+  mutualFriendCount: 0,
 };
 
 const REQUEST_TO_USER4 = {
@@ -152,7 +156,7 @@ describe('GET /api/me/friend-requests', () => {
       expect(body).toEqual([]);
     });
 
-    it('pending の受信申請を requester 側のユーザーで返す', async () => {
+    it('pending の受信申請を requester 側のユーザーで返す（friendshipId・mutualFriendCount 込み）', async () => {
       mockSelectResult = [REQUEST_FROM_USER2, REQUEST_FROM_USER3];
 
       const res = await req('/api/me/friend-requests?direction=received');
@@ -161,18 +165,22 @@ describe('GET /api/me/friend-requests', () => {
       expect(res.status).toBe(200);
       expect(body).toEqual([
         {
+          friendshipId: 501,
           id: 'user2',
           handle: 'friend-a',
           name: 'Friend A',
           image: 'https://example.com/friend-a.png',
           bio: 'ramen',
+          mutualFriendCount: 3,
         },
         {
+          friendshipId: 502,
           id: 'user3',
           handle: 'friend-b',
           name: 'Friend B',
           image: null,
           bio: 'sushi',
+          mutualFriendCount: 0,
         },
       ]);
     });
