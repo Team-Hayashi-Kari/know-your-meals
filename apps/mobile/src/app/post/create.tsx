@@ -6,7 +6,8 @@ import { MiniHeader } from '../../components/post-flow/MiniHeader';
 import { PhotoSlot } from '../../components/post-flow/PhotoSlot';
 import { PinBadge } from '../../components/post-flow/PinBadge';
 import { PrimaryButton } from '../../components/post-flow/PrimaryButton';
-import { getDraft } from '../../lib/postDraft';
+import { clearDraft, getDraft } from '../../lib/postDraft';
+import { createPost } from '../../lib/posts-api';
 
 // pinEmojiEnum (packages/db/src/schema/content.ts) と揃える
 const PIN_EMOJIS = ['🍜', '🍣', '🍛', '🍙', '🍔', '🍕', '🥩', '🍰', '🍺', '🥟'] as const;
@@ -17,12 +18,41 @@ export default function PostCreateScreen() {
 
   const [comment, setComment] = useState('');
   const [pin, setPin] = useState<(typeof PIN_EMOJIS)[number] | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
 
   const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace('/post/store-search');
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!pin || !draft.store || !draft.imageBlob) return;
+
+    setSubmitting(true);
+    setSubmitError(false);
+    try {
+      await createPost({
+        shop: {
+          googlePlaceId: draft.store.placeId,
+          name: draft.store.name,
+          address: draft.store.address,
+          lat: draft.store.location.lat,
+          lng: draft.store.location.lng,
+        },
+        comment,
+        pin,
+        image: draft.imageBlob,
+      });
+      clearDraft();
+      router.replace('/post/done');
+    } catch {
+      setSubmitError(true);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -79,7 +109,13 @@ export default function PostCreateScreen() {
           </XStack>
         </YStack>
 
-        <PrimaryButton label="地図に投稿する" onPress={() => {}} disabled={!pin} />
+        {submitError ? (
+          <Text color="#ff6b6b" fontSize={13} textAlign="center" marginBottom="$3">
+            投稿に失敗しました。もう一度お試しください
+          </Text>
+        ) : null}
+
+        <PrimaryButton label="地図に投稿する" onPress={handleSubmit} disabled={!pin || !draft.store || !draft.imageBlob} loading={submitting} />
       </ScrollView>
     </YStack>
   );
