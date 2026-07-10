@@ -27,8 +27,7 @@ export function distanceInMeters(from: { lat: number; lng: number }, to: { lat: 
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const dLat = toRad(to.lat - from.lat);
   const dLng = toRad(to.lng - from.lng);
-  const a =
-    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.sin(dLng / 2) ** 2;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
