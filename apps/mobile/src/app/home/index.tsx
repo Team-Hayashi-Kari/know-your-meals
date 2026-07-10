@@ -1,29 +1,11 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Spinner, Text, YStack } from 'tamagui';
-import { authClient } from '../../lib/auth-client';
-import { getReceivedFriendRequests } from '../../lib/mock-api';
-
-export default function HomeScreen() {
-  const router = useRouter();
-  const { data: session, isPending } = authClient.useSession();
-  const [receivedCount, setReceivedCount] = useState(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      getReceivedFriendRequests()
-        .then((requests) => setReceivedCount(requests.length))
-        .catch(() => setReceivedCount(0));
-    }, []),
-  );
-import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { YStack } from 'tamagui';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Text, XStack, YStack } from 'tamagui';
 import { CategoryFilterChips } from '../../components/map/CategoryFilterChips';
 import { GoogleMapView } from '../../components/map/GoogleMapView';
 import { MapSearchBar } from '../../components/map/MapSearchBar';
 import { NearbyPostsSheet } from '../../components/map/NearbyPostsSheet';
-import { getMe, getNearbyPosts, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
+import { getMe, getNearbyPosts, getReceivedFriendRequests, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
 
 // 現在地が取得できない場合のフォールバック（渋谷駅付近）
 const FALLBACK_CENTER = { lat: 35.6595, lng: 139.7005 };
@@ -36,6 +18,15 @@ export default function HomeScreen() {
   const [userInitial, setUserInitial] = useState('?');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<PinEmoji | null>(null);
+  const [receivedCount, setReceivedCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      getReceivedFriendRequests()
+        .then((requests) => setReceivedCount(requests.length))
+        .catch(() => setReceivedCount(0));
+    }, []),
+  );
 
   // 現在地を取得（拒否/未対応の場合はフォールバックのまま）
   useEffect(() => {
@@ -74,21 +65,14 @@ export default function HomeScreen() {
   };
 
   return (
-    <YStack flex={1} backgroundColor="#000" justifyContent="center" alignItems="center" gap="$4">
-      <Text color="#fff" fontSize={24} fontWeight="700">
-        ホーム
-      </Text>
-      <Text color="#555" fontSize={14}>
-        {session?.user?.email ?? ''}
-      </Text>
-      <Text color="#fff" fontSize={14} fontWeight="600" onPress={() => router.push('/home/friends')}>
-        受信した申請{receivedCount > 0 ? ` ${receivedCount}` : ''}
-      </Text>
-      <Text color="#444" fontSize={13} fontWeight="600" onPress={handleLogout} marginTop="$4">
-        ログアウト
-      </Text>
     <YStack flex={1} backgroundColor="#000">
       <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} userInitial={userInitial} />
+
+      <XStack paddingHorizontal="$5" paddingBottom="$3" justifyContent="flex-end">
+        <Text color="#fff" fontSize={14} fontWeight="600" onPress={() => router.push('/home/friends')}>
+          受信した申請{receivedCount > 0 ? ` ${receivedCount}` : ''}
+        </Text>
+      </XStack>
 
       <YStack paddingBottom="$3">
         <CategoryFilterChips selected={selectedCategory} onChange={setSelectedCategory} />
