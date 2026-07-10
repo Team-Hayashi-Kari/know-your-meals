@@ -1,3 +1,4 @@
+import { getAvatarColor, getAvatarInitial } from '@repo/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Button, Input, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
@@ -131,9 +132,9 @@ function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: (
 
   return (
     <XStack alignItems="center" gap="$3">
-      <YStack width={44} height={44} borderRadius={22} backgroundColor={getColorFromName(user.name)} justifyContent="center" alignItems="center">
+      <YStack width={44} height={44} borderRadius={22} backgroundColor={getAvatarColor(user.name)} justifyContent="center" alignItems="center">
         <Text color="#fff" fontSize={18} fontWeight="700">
-          {getInitial(user.name)}
+          {getAvatarInitial(user.name)}
         </Text>
       </YStack>
       <YStack flex={1}>
@@ -157,20 +158,4 @@ function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: (
       )}
     </XStack>
   );
-}
-
-function getInitial(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) return '?';
-  return trimmed.charAt(0).toUpperCase();
-}
-
-function getColorFromName(name: string): string {
-  const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#e84393'];
-  if (!name.trim()) return '#333';
-  let sum = 0;
-  for (let i = 0; i < name.length; i++) {
-    sum += name.charCodeAt(i);
-  }
-  return colors[sum % colors.length];
 }
