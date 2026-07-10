@@ -62,6 +62,16 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
   return mockUsers.filter((u) => u.handle.includes(q) || u.name.toLowerCase().includes(q));
 }
 
+// GET /api/users/check-handle?handle= 相当
+// そのIDが使えるか（他の人に使われていないか）を返す
+export async function checkHandleAvailable(handle: string): Promise<boolean> {
+  await delay(300);
+  const h = handle.toLowerCase().replace('@', '');
+  // 既存ユーザーの handle と一致したら「使われている（false）」
+  const taken = mockUsers.some((u) => u.handle.toLowerCase() === h);
+  return !taken;
+}
+
 // POST /api/friendships 相当
 export async function sendFriendRequest(userId: string): Promise<void> {
   await delay(300);
