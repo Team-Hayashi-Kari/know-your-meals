@@ -78,8 +78,10 @@ export default function CameraScreen() {
   }
 
   return (
-    <CameraView ref={cameraRef} style={{ flex: 1, backgroundColor: '#000' }} facing={facing} flash={flash}>
-      <YStack flex={1} zIndex={1}>
+    <YStack flex={1} backgroundColor="#000">
+      <CameraView ref={cameraRef} style={{ flex: 1 }} facing={facing} flash={flash} />
+      {/* CameraViewはchildrenを公式サポートしないため、兄弟要素として絶対配置で重ねる */}
+      <YStack position="absolute" top={0} left={0} right={0} bottom={0} zIndex={1}>
         <XStack justifyContent="space-between" alignItems="center" paddingHorizontal="$5" paddingTop="$5">
           <Pressable onPress={handleCancel} hitSlop={12} accessibilityRole="button" accessibilityLabel="キャンセル">
             <YStack width={38} height={38} borderRadius={19} backgroundColor="rgba(0,0,0,0.4)" justifyContent="center" alignItems="center">
@@ -157,6 +159,6 @@ export default function CameraScreen() {
           </XStack>
         </YStack>
       </YStack>
-    </CameraView>
+    </YStack>
   );
 }
