@@ -1,0 +1,56 @@
+// apps/mobile/src/lib/api-client.ts
+//
+// 本物のバックエンド（apps/api）を叩く fetch ラッパー。
+// better-auth/expo はセッションCookieを SecureStore に保存するだけで、
+// authClient 以外の fetch には自動で付与されないため、authClient.getCookie() で取り出して手動で付与する。
+// Web は expo-secure-store が未実装（SecureStore.getItem が存在せずクラッシュする）ため、
+// web では authClient.getCookie() を呼ばず、ブラウザの Cookie jar に任せて credentials: 'include' を使う
+// （Cookie ヘッダーは仕様上ブラウザから手動設定できないので、これがないと web は毎回401になる）。
+
+import { Platform } from 'react-native';
+import { authClient } from './auth-client';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    credentials: Platform.OS === 'web' ? 'include' : undefined,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(Platform.OS === 'web' ? {} : { Cookie: authClient.getCookie() }),
+      ...init.headers,
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error ?? `Request failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<T>;
+}
+
+export type MeProfile = {
+  id: string;
+  name: string;
+  handle: string | null; // null なら「初回プロフィール未設定」
+  bio: string | null;
+  image: string | null;
+};
+
+// GET /api/me
+export function getMe(): Promise<MeProfile> {
+  return apiFetch('/api/me');
+}
+
+// PATCH /api/me
+export function updateMe(data: Partial<Pick<MeProfile, 'name' | 'handle' | 'bio' | 'image'>>): Promise<MeProfile> {
+  return apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// GET /api/users/check-handle?handle=
+export async function checkHandleAvailable(handle: string): Promise<boolean> {
+  const { available } = await apiFetch<{ available: boolean }>(`/api/users/check-handle?handle=${encodeURIComponent(handle)}`);
+  return available;
+}

@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Button, Input, Spinner, Text, TextArea, XStack, YStack } from 'tamagui';
-import { checkHandleAvailable, getMe, updateMe } from '../lib/mock-api';
+import { checkHandleAvailable, getMe, updateMe } from '../lib/api-client';
 
 const NAME_MAX = 20;
 const HANDLE_MIN = 3;
@@ -105,6 +105,9 @@ export default function ProfileEditScreen() {
       goBack();
     } catch (e) {
       console.error('[プロフィール更新エラー]', e);
+      if (e instanceof Error && e.message === 'Handle already exists') {
+        setHandleError('このIDは使われています');
+      }
       setSaving(false);
     }
   };
@@ -240,5 +243,5 @@ function countChars(str: string): number {
 }
 
 function isHandleFormatValid(h: string): boolean {
-  return /^[a-zA-Z0-9_.]+$/.test(h);
+  return /^[a-zA-Z0-9_]+$/.test(h);
 }
