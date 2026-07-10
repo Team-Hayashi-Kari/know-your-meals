@@ -1,6 +1,6 @@
 import { getAvatarColor, getAvatarInitial } from '@repo/shared';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Button, Input, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
 import { getSuggestedUsers, searchUsers, sendFriendRequest, type UserSearchResult } from '../lib/mock-api';
 
@@ -14,10 +14,16 @@ export default function FindFriendsScreen() {
   // 1人でも申請したかどうか
   const [hasRequested, setHasRequested] = useState(false);
 
-  // 画面を開いた瞬間におすすめフレンドを取得
-  useEffect(() => {
-    getSuggestedUsers().then((users) => setSuggested(users));
-  }, []);
+  // 画面にフォーカスが戻るたび（他人プロフィールから戻ってきた時含む）に再取得し、relationshipStatusの古い表示を防ぐ
+  useFocusEffect(
+    useCallback(() => {
+      getSuggestedUsers().then((users) => setSuggested(users));
+      const trimmed = query.trim();
+      if (trimmed) {
+        searchUsers(trimmed).then((users) => setResults(users));
+      }
+    }, [query]),
+  );
 
   // 検索欄が変わるたびに検索
   useEffect(() => {
@@ -122,6 +128,11 @@ function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: (
   const [status, setStatus] = useState(user.relationshipStatus);
   const [sending, setSending] = useState(false);
 
+  // フォーカス復帰時の再取得で prop が変わっても、同じ key の行は state を保持したままなので同期する
+  useEffect(() => {
+    setStatus(user.relationshipStatus);
+  }, [user.relationshipStatus]);
+
   const handleSend = async () => {
     setSending(true);
     await sendFriendRequest(user.id);
@@ -130,21 +141,25 @@ function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: (
     onRequested();
   };
 
+  const router = useRouter();
+
   return (
     <XStack alignItems="center" gap="$3">
-      <YStack width={44} height={44} borderRadius={22} backgroundColor={getAvatarColor(user.name)} justifyContent="center" alignItems="center">
-        <Text color="#fff" fontSize={18} fontWeight="700">
-          {getAvatarInitial(user.name)}
-        </Text>
-      </YStack>
-      <YStack flex={1}>
-        <Text color="#fff" fontSize={15} fontWeight="600">
-          {user.name}
-        </Text>
-        <Text color="#555" fontSize={13}>
-          @{user.handle}
-        </Text>
-      </YStack>
+      <XStack flex={1} alignItems="center" gap="$3" onPress={() => router.push(`/users/${user.handle}`)} pressStyle={{ opacity: 0.7 }}>
+        <YStack width={44} height={44} borderRadius={22} backgroundColor={getAvatarColor(user.name)} justifyContent="center" alignItems="center">
+          <Text color="#fff" fontSize={18} fontWeight="700">
+            {getAvatarInitial(user.name)}
+          </Text>
+        </YStack>
+        <YStack flex={1}>
+          <Text color="#fff" fontSize={15} fontWeight="600">
+            {user.name}
+          </Text>
+          <Text color="#555" fontSize={13}>
+            @{user.handle}
+          </Text>
+        </YStack>
+      </XStack>
       {status === 'pending_sent' ? (
         <Text color="#555" fontSize={13} fontWeight="600">
           申請中
