@@ -141,22 +141,24 @@ function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: (
 
   return (
     <XStack alignItems="center" gap="$3">
-      <XStack flex={1} alignItems="center" gap="$3" onPress={() => router.push(`/users/${user.handle}`)} pressStyle={{ opacity: 0.7 }}>
-        <YStack width={44} height={44} borderRadius={22} backgroundColor={getAvatarColor(user.name)} justifyContent="center" alignItems="center">
-          <Text color="#fff" fontSize={18} fontWeight="700">
-            {getAvatarInitial(user.name)}
-          </Text>
-        </YStack>
-        <YStack flex={1}>
-          <Text color="#fff" fontSize={15} fontWeight="600">
-            {user.name}
-          </Text>
-          <Text color="#555" fontSize={13}>
-            @{user.handle}
-          </Text>
-        </YStack>
-      </XStack>
-      {status === 'none' ? (
+      <YStack width={44} height={44} borderRadius={22} backgroundColor={getAvatarColor(user.name)} justifyContent="center" alignItems="center">
+        <Text color="#fff" fontSize={18} fontWeight="700">
+          {getAvatarInitial(user.name)}
+        </Text>
+      </YStack>
+      <YStack flex={1}>
+        <Text color="#fff" fontSize={15} fontWeight="600">
+          {user.name}
+        </Text>
+        <Text color="#555" fontSize={13}>
+          @{user.handle}
+        </Text>
+      </YStack>
+      {status === 'pending_sent' ? (
+        <Text color="#555" fontSize={13} fontWeight="600">
+          申請中
+        </Text>
+      ) : status === 'none' ? (
         <Button onPress={handleSend} disabled={sending} backgroundColor="#1a1a1a" borderRadius="$4" height={36} paddingHorizontal="$4">
           <Text color="#ffd400" fontSize={13} fontWeight="700">
             申請する

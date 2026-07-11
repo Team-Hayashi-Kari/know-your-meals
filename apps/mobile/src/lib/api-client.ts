@@ -21,13 +21,19 @@ export class ApiError extends Error {
   }
 }
 
+// API が返す相対パス（例: "/api/images/xxx"）をネイティブの Image でも表示できる絶対URLにする
+export function buildApiUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${baseURL}${path}`;
+}
+
 // Web はブラウザの Cookie ジャーが自動送信するので credentials:'include' で足りる
 // (fetch は "Cookie" ヘッダを手動セットできない = forbidden header、ブラウザが黙って無視する)。
 // ネイティブ(Expoアプリ)はブラウザの Cookie ジャーが無いので authClient.getCookie() で手動添付する。
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${baseURL}${path}`, {
+    res = await fetch(buildApiUrl(path), {
       ...init,
       credentials: Platform.OS === 'web' ? 'include' : undefined,
       headers: {
