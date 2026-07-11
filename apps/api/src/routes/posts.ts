@@ -84,25 +84,28 @@ export const postsRoute = new Hono<Env>()
     const contentType = sniffMime(new Uint8Array(arrayBuffer));
     if (!contentType) return c.json({ error: 'Unsupported image format. Use JPEG, PNG, or WebP.' }, 400);
 
-    const [upsertedShops] = await Promise.all([
-      db
-        .insert(shops)
-        .values({
-          googlePlaceId: shop.googlePlaceId,
-          name: shop.name,
-          address: shop.address ?? null,
-          lat: shop.lat,
-          lng: shop.lng,
-        })
-        .onConflictDoUpdate({
-          target: shops.googlePlaceId,
-          set: { name: shop.name, address: shop.address ?? null, lat: shop.lat, lng: shop.lng },
-        })
-        .returning(),
-      c.env.IMAGES_BUCKET.put(key, arrayBuffer, { httpMetadata: { contentType } }),
-    ]);
-    const upsertedShop = upsertedShops[0];
-    if (!upsertedShop) {
+    let upsertedShop: typeof shops.$inferSelect;
+    try {
+      const [upsertedShops] = await Promise.all([
+        db
+          .insert(shops)
+          .values({
+            googlePlaceId: shop.googlePlaceId,
+            name: shop.name,
+            address: shop.address ?? null,
+            lat: shop.lat,
+            lng: shop.lng,
+          })
+          .onConflictDoUpdate({
+            target: shops.googlePlaceId,
+            set: { name: shop.name, address: shop.address ?? null, lat: shop.lat, lng: shop.lng },
+          })
+          .returning(),
+        c.env.IMAGES_BUCKET.put(key, arrayBuffer, { httpMetadata: { contentType } }),
+      ]);
+      if (!upsertedShops[0]) throw new Error('Failed to upsert shop');
+      upsertedShop = upsertedShops[0];
+    } catch {
       await c.env.IMAGES_BUCKET.delete(key);
       return c.json({ error: 'Failed to upsert shop' }, 500);
     }
