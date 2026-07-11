@@ -219,6 +219,8 @@ export async function getUserPosts(handle: string): Promise<NearbyPost[]> {
   const user = mockUserProfiles.find((u) => u.handle.toLowerCase() === h);
   if (!user) return [];
   return mockNearbyPosts.filter((p) => p.userName === user.name);
+}
+
 // GET /api/me/friend-requests?direction=received
 export type ReceivedFriendRequest = {
   friendshipId: number;
