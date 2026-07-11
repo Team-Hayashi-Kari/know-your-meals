@@ -1,8 +1,9 @@
+import { PIN_EMOJIS } from '@repo/shared';
 import { relations } from 'drizzle-orm';
 import { doublePrecision, index, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { user } from './auth';
 
-export const pinEmojiEnum = pgEnum('pin_emoji', ['🍜', '🍣', '🍛', '🍙', '🍔', '🍕', '🥩', '🍰', '🍺', '🥟']);
+export const pinEmojiEnum = pgEnum('pin_emoji', PIN_EMOJIS);
 
 export const shops = pgTable(
   'shops',
