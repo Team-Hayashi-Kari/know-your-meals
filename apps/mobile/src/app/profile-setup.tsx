@@ -4,9 +4,11 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image as RNImage } from 'react-native';
 import { Button, Input, ScrollView, Spinner, Text, TextArea, XStack, YStack } from 'tamagui';
-import { checkHandleAvailable, updateMe } from '../lib/mock-api';
+import { checkHandleAvailable, getMe, updateMe } from '../lib/api';
+import { ApiError } from '../lib/api-client';
 
 const NAME_MAX = 20;
+const HANDLE_MIN = 3;
 const HANDLE_MAX = 15;
 
 export default function ProfileSetupScreen() {
@@ -15,6 +17,7 @@ export default function ProfileSetupScreen() {
   const [name, setName] = useState('');
   const [handle, setHandle] = useState('');
   const [bio, setBio] = useState('');
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving, setSaving] = useState(false);
   const [image, setImage] = useState<string | null>(null);
 
@@ -22,29 +25,79 @@ export default function ProfileSetupScreen() {
 
   const [nameError, setNameError] = useState('');
   const [handleError, setHandleError] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   const nameCount = countChars(name.trim());
   const handleCount = countChars(handle.trim());
 
   useEffect(() => {
+    let cancelled = false;
+
+    getMe()
+      .then((me) => {
+        if (cancelled) return;
+        if (me.handle) {
+          router.replace('/home');
+          return;
+        }
+
+        setName(me.name ?? '');
+        setBio(me.bio ?? '');
+        setImage(me.image ?? null);
+        setLoadingProfile(false);
+      })
+      .catch((error) => {
+        console.error('[プロフィール取得エラー]', error);
+        if (!cancelled) router.replace('/');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  useEffect(() => {
+    const validationError = getNameValidationError(name.trim());
+    setNameError(validationError);
+    setSaveError('');
+  }, [name]);
+
+  useEffect(() => {
     const trimmed = handle.trim();
+    const validationError = getHandleValidationError(trimmed);
     setHandleError('');
+    setSaveError('');
 
     if (!trimmed) {
       setHandleStatus('idle');
       return;
     }
-    if (!isHandleFormatValid(trimmed) || countChars(trimmed) > HANDLE_MAX) {
+    if (validationError) {
       setHandleStatus('idle');
+      setHandleError(validationError);
       return;
     }
+
+    let cancelled = false;
     setHandleStatus('checking');
     const timer = setTimeout(() => {
-      checkHandleAvailable(trimmed).then((ok) => {
-        setHandleStatus(ok ? 'available' : 'taken');
-      });
+      checkHandleAvailable(trimmed)
+        .then((ok) => {
+          if (cancelled) return;
+          setHandleStatus(ok ? 'available' : 'taken');
+          setHandleError('');
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          console.error('[ユーザーID確認エラー]', error);
+          setHandleStatus('idle');
+          setHandleError('IDの確認に失敗しました。通信状況を確認してください');
+        });
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [handle]);
 
   const handlePickImage = async () => {
@@ -63,27 +116,24 @@ export default function ProfileSetupScreen() {
   const handleNext = async () => {
     setNameError('');
     setHandleError('');
+    setSaveError('');
 
     const trimmedName = name.trim();
     const trimmedHandle = handle.trim();
     let hasError = false;
 
+    const nameValidationError = getNameValidationError(trimmedName);
     if (!trimmedName) {
       setNameError('名前を入力してください');
       hasError = true;
-    } else if (countChars(trimmedName) > NAME_MAX) {
-      setNameError(`名前は${NAME_MAX}文字以内で入力してください`);
+    } else if (nameValidationError) {
+      setNameError(nameValidationError);
       hasError = true;
     }
 
-    if (!trimmedHandle) {
-      setHandleError('ユーザーIDを入力してください');
-      hasError = true;
-    } else if (!isHandleFormatValid(trimmedHandle)) {
-      setHandleError('IDは半角の英数字・記号（_ .）のみ使えます');
-      hasError = true;
-    } else if (countChars(trimmedHandle) > HANDLE_MAX) {
-      setHandleError(`IDは${HANDLE_MAX}文字以内で入力してください`);
+    const handleValidationError = getHandleValidationError(trimmedHandle);
+    if (handleValidationError) {
+      setHandleError(handleValidationError);
       hasError = true;
     } else if (handleStatus === 'taken') {
       setHandleError('このIDは使われています');
@@ -97,13 +147,31 @@ export default function ProfileSetupScreen() {
 
     setSaving(true);
     try {
-      await updateMe({ name: trimmedName, handle: trimmedHandle, bio, image });
+      await updateMe({
+        name: trimmedName,
+        handle: trimmedHandle,
+        bio,
+        ...(image?.startsWith('http://') || image?.startsWith('https://') ? { image } : {}),
+      });
       router.replace('/find-friends');
     } catch (e) {
       console.error('[プロフィール保存エラー]', e);
+      if (e instanceof ApiError && e.status === 409) {
+        setHandleError('このIDは使われています');
+      } else {
+        setSaveError('プロフィールの保存に失敗しました');
+      }
       setSaving(false);
     }
   };
+
+  if (loadingProfile) {
+    return (
+      <YStack flex={1} backgroundColor="#000" justifyContent="center" alignItems="center">
+        <Spinner color="#fff" size="large" />
+      </YStack>
+    );
+  }
 
   return (
     <ScrollView
@@ -263,6 +331,12 @@ export default function ProfileSetupScreen() {
         />
       </YStack>
 
+      {saveError !== '' && (
+        <Text color="#ff4444" fontSize={13} marginBottom="$3">
+          {saveError}
+        </Text>
+      )}
+
       <Button
         onPress={handleNext}
         disabled={saving}
@@ -289,6 +363,19 @@ function countChars(str: string): number {
   return [...str].length;
 }
 
+function getNameValidationError(name: string): string {
+  if (countChars(name) > NAME_MAX) return `名前は${NAME_MAX}文字以内で入力してください`;
+  return '';
+}
+
 function isHandleFormatValid(h: string): boolean {
-  return /^[a-zA-Z0-9_.]+$/.test(h);
+  return /^[a-zA-Z0-9_]+$/.test(h);
+}
+
+function getHandleValidationError(handle: string): string {
+  if (!handle) return 'ユーザーIDを入力してください';
+  if (countChars(handle) < HANDLE_MIN) return `IDは${HANDLE_MIN}文字以上で入力してください`;
+  if (!isHandleFormatValid(handle)) return 'IDは半角の英数字・記号（_）のみ使えます';
+  if (countChars(handle) > HANDLE_MAX) return `IDは${HANDLE_MAX}文字以内で入力してください`;
+  return '';
 }

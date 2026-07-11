@@ -6,6 +6,8 @@ import { GoogleMapView } from '../../components/map/GoogleMapView';
 import { MapSearchBar } from '../../components/map/MapSearchBar';
 import { NearbyPostsSheet } from '../../components/map/NearbyPostsSheet';
 import { getMe, getNearbyPosts, getReceivedFriendRequests, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
+import { BottomTabBar } from '../../components/navigation/BottomTabBar';
+import { getMe, getNearbyPosts, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
 
 // 現在地が取得できない場合のフォールバック（渋谷駅付近）
 const FALLBACK_CENTER = { lat: 35.6595, lng: 139.7005 };
@@ -66,7 +68,7 @@ export default function HomeScreen() {
 
   return (
     <YStack flex={1} backgroundColor="#000">
-      <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} userInitial={userInitial} />
+      <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} userInitial={userInitial} onPressProfile={() => router.push('/profile-edit')} />
 
       <XStack paddingHorizontal="$5" paddingBottom="$3" justifyContent="flex-end">
         <Text color="#fff" fontSize={14} fontWeight="600" onPress={() => router.push('/home/friends')}>
@@ -82,6 +84,8 @@ export default function HomeScreen() {
         <GoogleMapView center={center} posts={visiblePosts} onPressPost={goToPostDetail} />
         <NearbyPostsSheet posts={visiblePosts} onPressPost={goToPostDetail} />
       </YStack>
+
+      <BottomTabBar />
     </YStack>
   );
 }

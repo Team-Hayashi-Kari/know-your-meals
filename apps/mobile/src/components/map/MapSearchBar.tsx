@@ -6,11 +6,10 @@ type MapSearchBarProps = {
   value: string;
   onChangeText: (value: string) => void;
   userInitial: string;
+  onPressProfile?: () => void;
 };
 
-// アバターのタップ先（プロフィール画面）はまだこのリポジトリに存在しないため未接続。
-// 該当ルートができ次第、Pressable の onPress でそこへ遷移させる。
-export function MapSearchBar({ value, onChangeText, userInitial }: MapSearchBarProps) {
+export function MapSearchBar({ value, onChangeText, userInitial, onPressProfile }: MapSearchBarProps) {
   return (
     <XStack alignItems="center" gap="$3" paddingHorizontal="$5" paddingTop="$4" paddingBottom="$3">
       <Input
@@ -28,7 +27,7 @@ export function MapSearchBar({ value, onChangeText, userInitial }: MapSearchBarP
         paddingHorizontal="$4"
         autoCapitalize="none"
       />
-      <Pressable accessibilityRole="button" accessibilityLabel="プロフィール">
+      <Pressable accessibilityRole="button" accessibilityLabel="プロフィール" onPress={onPressProfile}>
         <Avatar initial={userInitial} size={40} />
       </Pressable>
     </XStack>
