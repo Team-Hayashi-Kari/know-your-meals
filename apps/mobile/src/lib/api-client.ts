@@ -10,52 +10,6 @@
 import { Platform } from 'react-native';
 import { authClient } from './auth-client';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-
-async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    credentials: Platform.OS === 'web' ? 'include' : undefined,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(Platform.OS === 'web' ? {} : { Cookie: authClient.getCookie() }),
-      ...init.headers,
-    },
-  });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? `Request failed: ${res.status}`);
-  }
-
-  return res.json() as Promise<T>;
-}
-
-export type MeProfile = {
-  id: string;
-  name: string;
-  handle: string | null; // null なら「初回プロフィール未設定」
-  bio: string | null;
-  image: string | null;
-};
-
-// GET /api/me
-export function getMe(): Promise<MeProfile> {
-  return apiFetch('/api/me');
-}
-
-// PATCH /api/me
-export function updateMe(data: Partial<Pick<MeProfile, 'name' | 'handle' | 'bio' | 'image'>>): Promise<MeProfile> {
-  return apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify(data) });
-}
-
-// GET /api/users/check-handle?handle=
-export async function checkHandleAvailable(handle: string): Promise<boolean> {
-  const { available } = await apiFetch<{ available: boolean }>(`/api/users/check-handle?handle=${encodeURIComponent(handle)}`);
-  return available;
-import { Platform } from 'react-native';
-import { authClient } from './auth-client';
-
 const baseURL = process.env.EXPO_PUBLIC_API_URL;
 
 export class ApiError extends Error {
