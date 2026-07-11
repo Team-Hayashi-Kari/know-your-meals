@@ -1,5 +1,4 @@
 import { getAvatarColor, getAvatarInitial } from '@repo/shared';
-import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Input, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
 import { type FriendUser, getFriends } from '../../lib/mock-api';
