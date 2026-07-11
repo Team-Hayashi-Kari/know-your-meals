@@ -3,9 +3,10 @@
 // 本番 API (apps/api) への fetch ラッパー。Issue #78 / FE-16。
 // Web は credentials: 'include' でブラウザCookieを送信し、Native は better-auth expo の Cookie を手動付与する。
 
-import type { Me, SentFriendRequest } from '@repo/api-types';
+import type { BookmarkedPost, Me, SentFriendRequest } from '@repo/api-types';
 import { Platform } from 'react-native';
 import { authClient } from './auth-client';
+import { type SavedPostItem, toSavedPostItem } from './saved-posts';
 
 export class ApiError extends Error {
   status: number;
@@ -133,6 +134,12 @@ export async function updateMe(data: UpdateMeInput): Promise<Me> {
     },
     body: JSON.stringify(data),
   });
+}
+
+// GET /api/me/bookmarks
+export async function getBookmarkedPosts(): Promise<SavedPostItem[]> {
+  const posts = await apiFetch<BookmarkedPost[]>('/api/me/bookmarks');
+  return posts.map(toSavedPostItem);
 }
 
 // GET /api/users/:handle を流用して重複チェックする(404 なら空き、200 なら使用中)
