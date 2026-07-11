@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Button, Input, Spinner, Text, TextArea, XStack, YStack } from 'tamagui';
-import { checkHandleAvailable, getMe, updateMe } from '../lib/api';
+import { ApiError, checkHandleAvailable, getMe, updateMe } from '../lib/api';
 
 const NAME_MAX = 20;
 const HANDLE_MIN = 3;
@@ -23,14 +23,22 @@ export default function ProfileEditScreen() {
   const handleCount = countChars(handle.trim());
 
   useEffect(() => {
-    getMe().then((me) => {
-      setName(me.name);
-      setHandle(me.handle ?? '');
-      setInitialHandle((me.handle ?? '').trim());
-      setBio(me.bio ?? '');
-      setLoading(false);
-    });
-  }, []);
+    getMe()
+      .then((me) => {
+        setName(me.name);
+        setHandle(me.handle ?? '');
+        setInitialHandle((me.handle ?? '').trim());
+        setBio(me.bio ?? '');
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) {
+          router.replace('/');
+          return;
+        }
+        console.error('[プロフィール取得エラー]', e);
+      });
+  }, [router]);
 
   useEffect(() => {
     const trimmed = handle.trim();

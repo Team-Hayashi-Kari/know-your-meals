@@ -1,12 +1,14 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Text, XStack, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import { CategoryFilterChips } from '../../components/map/CategoryFilterChips';
 import { GoogleMapView } from '../../components/map/GoogleMapView';
 import { MapSearchBar } from '../../components/map/MapSearchBar';
 import { NearbyPostsSheet } from '../../components/map/NearbyPostsSheet';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
-import { getMe, getNearbyPosts, getReceivedFriendRequests, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
+import { ProfileMenu } from '../../components/navigation/ProfileMenu';
+import { ApiError, getMe } from '../../lib/api';
+import { getNearbyPosts, getReceivedFriendRequests, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
 
 // 現在地が取得できない場合のフォールバック（渋谷駅付近）
 const FALLBACK_CENTER = { lat: 35.6595, lng: 139.7005 };
@@ -16,10 +18,13 @@ export default function HomeScreen() {
 
   const [center, setCenter] = useState(FALLBACK_CENTER);
   const [posts, setPosts] = useState<NearbyPost[]>([]);
+  const [userName, setUserName] = useState('');
+  const [userHandle, setUserHandle] = useState<string | null>(null);
   const [userInitial, setUserInitial] = useState('?');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<PinEmoji | null>(null);
   const [receivedCount, setReceivedCount] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -47,11 +52,21 @@ export default function HomeScreen() {
   }, [center]);
 
   useEffect(() => {
-    getMe().then((me) => {
-      const name = me.name.trim();
-      setUserInitial(name ? name.charAt(0).toUpperCase() : '?');
-    });
-  }, []);
+    getMe()
+      .then((me) => {
+        const name = me.name.trim();
+        setUserName(name);
+        setUserHandle(me.handle);
+        setUserInitial(name ? name.charAt(0).toUpperCase() : '?');
+      })
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) {
+          router.replace('/');
+          return;
+        }
+        console.error('[ユーザー情報取得エラー]', e);
+      });
+  }, [router]);
 
   const visiblePosts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -67,21 +82,10 @@ export default function HomeScreen() {
 
   return (
     <YStack flex={1} backgroundColor="#000">
-      <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} userInitial={userInitial} onPressProfile={() => router.push('/profile-edit')} />
-
-      <XStack paddingHorizontal="$5" paddingBottom="$3" justifyContent="flex-end">
-        <Text color="#fff" fontSize={14} fontWeight="600" onPress={() => router.push('/friend-requests')}>
-          受信した申請{receivedCount > 0 ? ` ${receivedCount}` : ''}
-        </Text>
-      </XStack>
+      <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} userInitial={userInitial} onPressProfile={() => setMenuOpen(true)} />
 
       <YStack paddingBottom="$3">
         <CategoryFilterChips selected={selectedCategory} onChange={setSelectedCategory} />
-        <Button onPress={() => router.push('/home/friends')} backgroundColor="#1a1a1a" borderRadius="$4" marginHorizontal="$4" marginTop="$3">
-          <Text color="#fff" fontSize={14} fontWeight="600">
-            フレンド一覧
-          </Text>
-        </Button>
       </YStack>
 
       <YStack flex={1} position="relative">
@@ -90,6 +94,15 @@ export default function HomeScreen() {
       </YStack>
 
       <BottomTabBar />
+
+      <ProfileMenu
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        userInitial={userInitial}
+        name={userName}
+        handle={userHandle}
+        receivedRequestCount={receivedCount}
+      />
     </YStack>
   );
 }
