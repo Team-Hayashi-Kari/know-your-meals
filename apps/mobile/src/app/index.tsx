@@ -18,13 +18,17 @@ export default function LoginScreen() {
 
     try {
       if (Platform.OS === 'web') {
-        // Web: サーバーにOAuth URLを取得してリダイレクト
+        // Web: cross-origin fetch の state cookie はブラウザに保存されないため
+        // expo-authorization-proxy 経由で first-party セットしてから Google へ
         const { data, error } = await authClient.signIn.social({
           provider: 'google',
           callbackURL: `${window.location.origin}/after-login`,
         });
         if (error) throw new Error(error.message ?? JSON.stringify(error));
-        if (data?.url) window.location.href = data.url;
+        if (data?.url) {
+          const params = new URLSearchParams({ authorizationURL: data.url });
+          window.location.href = `${process.env.EXPO_PUBLIC_API_URL}/api/auth/expo-authorization-proxy?${params.toString()}`;
+        }
       } else {
         // Native: expoClient が WebBrowser を自動で開いて OAuth を完結させる
         const { error } = await authClient.signIn.social({

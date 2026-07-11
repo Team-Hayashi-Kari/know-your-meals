@@ -1,5 +1,5 @@
 import { bookmarks, createDb, friendships, images, posts, shops, user } from '@repo/db';
-import { and, desc, eq, ne, or } from 'drizzle-orm';
+import { and, desc, eq, ne, or, type SQLWrapper, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { Hono } from 'hono';
 import { postFriendshipCondition } from '../lib/visibility';
@@ -113,6 +113,23 @@ function toFriendUser(friend: FriendUser): FriendUser {
   };
 }
 
+// userA・userB 双方の accepted フレンドの共通数（自分と申請者の共通フレンド数の算出用）
+// SQL生成そのものは test/me-mutual-friend-count.spec.ts で検証するため export する
+export function mutualFriendCountSql(userA: SQLWrapper, userB: SQLWrapper) {
+  return sql<number>`(
+    SELECT COUNT(*)::int FROM (
+      SELECT CASE WHEN f1.requester_id = ${userA} THEN f1.addressee_id ELSE f1.requester_id END AS friend_id
+      FROM friendships f1
+      WHERE f1.status = 'accepted' AND (f1.requester_id = ${userA} OR f1.addressee_id = ${userA})
+    ) my_friends
+    JOIN (
+      SELECT CASE WHEN f2.requester_id = ${userB} THEN f2.addressee_id ELSE f2.requester_id END AS friend_id
+      FROM friendships f2
+      WHERE f2.status = 'accepted' AND (f2.requester_id = ${userB} OR f2.addressee_id = ${userB})
+    ) their_friends ON my_friends.friend_id = their_friends.friend_id
+  )`;
+}
+
 export const me = new Hono<Env>()
   .get('/', requireAuth, async (c) => {
     const authUser = c.get('user');
@@ -216,6 +233,7 @@ export const me = new Hono<Env>()
       if (direction === 'received') {
         const receivedRows = await db
           .select({
+            friendshipId: friendships.id,
             requester: {
               id: requester.id,
               handle: requester.handle,
@@ -223,6 +241,7 @@ export const me = new Hono<Env>()
               image: requester.image,
               bio: requester.bio,
             },
+            mutualFriendCount: mutualFriendCountSql(sql`${authUser.id}`, requester.id),
           })
           .from(friendships)
           .innerJoin(requester, eq(friendships.requesterId, requester.id))
@@ -237,6 +256,17 @@ export const me = new Hono<Env>()
         .select({
           friendshipId: friendships.id,
           requestedAt: friendships.createdAt,
+        return c.json(
+          receivedRows.map((row) => ({
+            friendshipId: row.friendshipId,
+            ...toFriendUser(row.requester),
+            mutualFriendCount: row.mutualFriendCount,
+          })),
+        );
+      }
+
+      const sentRows = await db
+        .select({
           addressee: {
             id: addressee.id,
             handle: addressee.handle,
@@ -257,6 +287,7 @@ export const me = new Hono<Env>()
           requestedAt: row.requestedAt,
         })),
       );
+      return c.json(sentRows.map((row) => toFriendUser(row.addressee)));
     } catch {
       return c.json({ error: 'Internal server error' }, 500);
     }
