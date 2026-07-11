@@ -26,6 +26,8 @@ async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   });
 }
 
+import { authClient } from './auth-client';
+
 export type MeProfile = {
   id: string;
   name: string;
@@ -40,6 +42,14 @@ export type UserSearchResult = {
   handle: string;
   image: string | null;
   relationshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'friends';
+};
+
+export type FriendUser = {
+  id: string;
+  name: string;
+  handle: string | null;
+  image: string | null;
+  bio: string | null;
 };
 
 // ---- 仮データ（本物のDBの代わり） ----
@@ -89,6 +99,20 @@ export async function getSuggestedUsers(): Promise<UserSearchResult[]> {
   await delay(300);
   // まだフレンドでない人をおすすめとして返す
   return mockUsers.filter((u) => u.relationshipStatus === 'none');
+}
+
+// GET /api/me/friends
+export async function getFriends(): Promise<FriendUser[]> {
+  // ネイティブではcookieが自動送信されないため authClient.getCookie() で手動付与する
+  // (better-auth expoクライアントの標準パターン)
+  const cookie = authClient.getCookie();
+  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/me/friends`, {
+    credentials: 'include',
+    headers: cookie ? { Cookie: cookie } : undefined,
+  });
+  if (res.status === 401) throw new Error('Unauthorized');
+  if (!res.ok) throw new Error(`Failed to fetch friends (${res.status})`);
+  return res.json();
 }
 
 // GET /api/users/check-handle?handle= 相当
