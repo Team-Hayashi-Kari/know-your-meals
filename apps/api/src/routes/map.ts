@@ -1,4 +1,4 @@
-import { createDb, friendships, images, posts, shops } from '@repo/db';
+import { createDb, friendships, images, posts, shops, user } from '@repo/db';
 import { and, between, desc, eq, or } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { postFriendshipCondition } from '../lib/visibility';
@@ -31,14 +31,22 @@ export const mapRoute = new Hono<Env>().get('/posts', requireAuth, async (c) => 
     .select({
       postId: posts.id,
       pin: posts.pin,
-      userId: posts.userId,
+      comment: posts.comment,
+      createdAt: posts.createdAt,
       lat: shops.lat,
       lng: shops.lng,
       shopName: shops.name,
       imageKey: images.key,
+      author: {
+        id: user.id,
+        handle: user.handle,
+        name: user.name,
+        image: user.image,
+      },
     })
     .from(posts)
     .innerJoin(shops, eq(posts.shopId, shops.id))
+    .innerJoin(user, eq(posts.userId, user.id))
     .leftJoin(images, eq(images.postId, posts.id))
     .leftJoin(friendships, postFriendshipCondition(authUser.id))
     .where(

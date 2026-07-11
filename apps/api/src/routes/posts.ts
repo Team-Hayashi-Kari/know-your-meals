@@ -1,4 +1,4 @@
-import { bookmarks, createDb, friendships, images, pinEmojiEnum, posts, shops } from '@repo/db';
+import { bookmarks, createDb, friendships, images, pinEmojiEnum, posts, shops, user } from '@repo/db';
 import { and, eq, or } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { postFriendshipCondition } from '../lib/visibility';
@@ -47,7 +47,7 @@ type ShopInput = {
 
 export const postsRoute = new Hono<Env>()
   .post('/', requireAuth, async (c) => {
-    const user = c.get('user');
+    const authUser = c.get('user');
     const body = await c.req.parseBody();
 
     const shopRaw = body.shop;
@@ -96,7 +96,7 @@ export const postsRoute = new Hono<Env>()
     const upsertedShop = upsertedShops[0];
     if (!upsertedShop) return c.json({ error: 'Failed to upsert shop' }, 500);
 
-    const key = `${user.id}/${crypto.randomUUID()}`;
+    const key = `${authUser.id}/${crypto.randomUUID()}`;
     const arrayBuffer = await imageFile.arrayBuffer();
     const contentType = sniffMime(new Uint8Array(arrayBuffer));
     if (!contentType) return c.json({ error: 'Unsupported image format. Use JPEG, PNG, or WebP.' }, 400);
@@ -110,7 +110,7 @@ export const postsRoute = new Hono<Env>()
       const createdPosts = await db
         .insert(posts)
         .values({
-          userId: user.id,
+          userId: authUser.id,
           shopId: upsertedShop.id,
           comment: comment ?? null,
           pin: pin as (typeof PIN_EMOJIS)[number],
@@ -206,9 +206,16 @@ export const postsRoute = new Hono<Env>()
           lat: shops.lat,
           lng: shops.lng,
         },
+        author: {
+          id: user.id,
+          handle: user.handle,
+          name: user.name,
+          image: user.image,
+        },
       })
       .from(posts)
       .innerJoin(shops, eq(posts.shopId, shops.id))
+      .innerJoin(user, eq(posts.userId, user.id))
       .leftJoin(images, eq(images.postId, posts.id))
       .leftJoin(friendships, postFriendshipCondition(authUser.id))
       .leftJoin(bookmarks, and(eq(bookmarks.postId, posts.id), eq(bookmarks.userId, authUser.id)))

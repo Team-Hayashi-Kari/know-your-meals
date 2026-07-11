@@ -8,7 +8,9 @@ import { PhotoSlot } from '../../components/post-flow/PhotoSlot';
 import { PinBadge } from '../../components/post-flow/PinBadge';
 import { PrimaryButton } from '../../components/post-flow/PrimaryButton';
 import { SecondaryButton } from '../../components/post-flow/SecondaryButton';
-import { deletePost, getPostById, type NearbyPost, toggleBookmark } from '../../lib/mock-api';
+import { ApiError } from '../../lib/api-client';
+import type { NearbyPost } from '../../lib/mock-api';
+import { addBookmark, deletePost, getPostById, removeBookmark } from '../../lib/posts-api';
 
 export default function PostDetailScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
@@ -29,16 +31,29 @@ export default function PostDetailScreen() {
 
   useEffect(() => {
     if (!postId) return;
-    getPostById(postId).then((result) => {
-      setPost(result ?? null);
-      if (result) setIsBookmarked(result.isBookmarked);
-    });
-  }, [postId]);
+    getPostById(postId)
+      .then((result) => {
+        setPost(result ?? null);
+        if (result) setIsBookmarked(result.isBookmarked);
+      })
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) {
+          router.replace('/');
+          return;
+        }
+        console.error('[投稿詳細取得エラー]', e);
+        setPost(null);
+      });
+  }, [postId, router]);
 
   const handleToggleBookmark = async () => {
     if (!post) return;
     setSaving(true);
-    await toggleBookmark(post.id);
+    if (isBookmarked) {
+      await removeBookmark(post.id);
+    } else {
+      await addBookmark(post.id);
+    }
     setIsBookmarked((prev) => !prev);
     setSaving(false);
   };
