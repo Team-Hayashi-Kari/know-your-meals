@@ -1,9 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Text, XStack, YStack } from 'tamagui';
-import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Button, Text, YStack } from 'tamagui';
+import { Button, Text, XStack, YStack } from 'tamagui';
 import { CategoryFilterChips } from '../../components/map/CategoryFilterChips';
 import { GoogleMapView } from '../../components/map/GoogleMapView';
 import { MapSearchBar } from '../../components/map/MapSearchBar';
@@ -73,7 +70,7 @@ export default function HomeScreen() {
       <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} userInitial={userInitial} onPressProfile={() => router.push('/profile-edit')} />
 
       <XStack paddingHorizontal="$5" paddingBottom="$3" justifyContent="flex-end">
-        <Text color="#fff" fontSize={14} fontWeight="600" onPress={() => router.push('/home/friends')}>
+        <Text color="#fff" fontSize={14} fontWeight="600" onPress={() => router.push('/friend-requests')}>
           受信した申請{receivedCount > 0 ? ` ${receivedCount}` : ''}
         </Text>
       </XStack>

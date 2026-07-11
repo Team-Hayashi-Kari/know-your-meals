@@ -26,8 +26,6 @@ async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   });
 }
 
-import { authClient } from './auth-client';
-
 export type MeProfile = {
   id: string;
   name: string;
