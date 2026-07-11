@@ -21,6 +21,12 @@ export type ShopSummary = {
 };
 
 export type PostAuthor = {
+  id: string;
+  handle: string | null;
+  name: string;
+  image: string | null;
+};
+
 // GET /api/me/friend-requests?direction=sent の1件分のレスポンス型
 export type SentFriendRequest = {
   friendshipId: number;
@@ -29,6 +35,7 @@ export type SentFriendRequest = {
   handle: string | null;
   name: string;
   image: string | null;
+  bio: string | null;
 };
 
 // GET /api/me/bookmarks のレスポンス型（apps/api/src/routes/me.ts の .get('/bookmarks', ...) と揃える）
@@ -44,5 +51,4 @@ export type BookmarkedPost = {
   imageUrl: string | null;
   shop: ShopSummary;
   author: PostAuthor;
-  bio: string | null;
 };
