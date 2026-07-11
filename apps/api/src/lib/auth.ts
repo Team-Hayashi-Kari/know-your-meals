@@ -17,5 +17,9 @@ export function createAuth(env: Bindings) {
     },
     trustedOrigins: ['exp://', 'http://localhost:8081', 'https://know-your-meals.pages.dev'],
     plugins: [expo()],
+    account: {
+      // ponytail: pages.dev→API のクロスオリジン fetch で SameSite=Lax の state cookie が保存されないため
+      skipStateCookieCheck: true,
+    },
   });
 }
