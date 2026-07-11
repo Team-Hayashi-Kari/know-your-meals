@@ -26,8 +26,8 @@ export function ProfileMenu({ visible, onClose, userInitial, name, handle, recei
   return (
     <>
       <YStack
-        accessibilityRole="button"
-        accessibilityLabel="メニューを閉じる"
+        role="button"
+        aria-label="メニューを閉じる"
         onPress={onClose}
         position="absolute"
         top={0}
