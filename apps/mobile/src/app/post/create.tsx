@@ -1,3 +1,4 @@
+import { PIN_EMOJIS } from '@repo/shared';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView } from 'react-native';
@@ -8,9 +9,6 @@ import { PinBadge } from '../../components/post-flow/PinBadge';
 import { PrimaryButton } from '../../components/post-flow/PrimaryButton';
 import { clearDraft, getDraft } from '../../lib/postDraft';
 import { createPost } from '../../lib/posts-api';
-
-// pinEmojiEnum (packages/db/src/schema/content.ts) と揃える
-const PIN_EMOJIS = ['🍜', '🍣', '🍛', '🍙', '🍔', '🍕', '🥩', '🍰', '🍺', '🥟'] as const;
 
 export default function PostCreateScreen() {
   const router = useRouter();
@@ -43,7 +41,7 @@ export default function PostCreateScreen() {
           lat: draft.store.location.lat,
           lng: draft.store.location.lng,
         },
-        comment,
+        comment: comment.trim() || undefined,
         pin,
         image: draft.imageBlob,
       });
@@ -102,7 +100,7 @@ export default function PostCreateScreen() {
           </Text>
           <XStack flexWrap="wrap" gap="$3">
             {PIN_EMOJIS.map((emoji) => (
-              <YStack key={emoji} onPress={() => setPin(emoji)}>
+              <YStack key={emoji} onPress={() => setPin(emoji)} accessibilityRole="button" accessibilityLabel={`ピン ${emoji} を選択`}>
                 <PinBadge emoji={emoji} selected={pin === emoji} />
               </YStack>
             ))}

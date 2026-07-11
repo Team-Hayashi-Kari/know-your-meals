@@ -2,7 +2,7 @@
 
 export type CreatePostInput = {
   shop: { googlePlaceId: string; name: string; address: string; lat: number; lng: number };
-  comment: string;
+  comment?: string;
   pin: string;
   image: Blob;
 };
@@ -19,7 +19,7 @@ export type CreatedPost = {
 export async function createPost(input: CreatePostInput): Promise<CreatedPost> {
   const formData = new FormData();
   formData.append('shop', JSON.stringify(input.shop));
-  formData.append('comment', input.comment);
+  if (input.comment) formData.append('comment', input.comment);
   formData.append('pin', input.pin);
   formData.append('image', input.image, 'photo.jpg');
 
