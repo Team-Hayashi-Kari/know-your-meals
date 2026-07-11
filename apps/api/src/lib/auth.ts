@@ -8,6 +8,10 @@ export function createAuth(env: Bindings) {
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
+    session: {
+      expiresIn: 60 * 60 * 24 * 30,
+      updateAge: 60 * 60 * 24,
+    },
     database: drizzleAdapter(createDb(env.DATABASE_URL), { provider: 'pg' }),
     socialProviders: {
       google: {

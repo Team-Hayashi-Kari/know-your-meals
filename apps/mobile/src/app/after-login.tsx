@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Spinner, Text, YStack } from 'tamagui';
-import { getMe } from '../lib/api';
+import { ApiError, getMe } from '../lib/api';
 
 export default function AfterLoginScreen() {
   const router = useRouter();
@@ -17,6 +17,10 @@ export default function AfterLoginScreen() {
         }
       })
       .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) {
+          router.replace('/');
+          return;
+        }
         console.error('[プロフィール取得エラー]', e);
         const message = e instanceof Error ? e.message : 'Unknown error';
         setError(`プロフィールの取得に失敗しました: ${message}`);
