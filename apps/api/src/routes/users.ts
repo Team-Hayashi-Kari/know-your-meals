@@ -46,10 +46,15 @@ export const usersRoute = new Hono<Env>()
     const where = and(searchCondition, ne(user.id, currentUser.id));
 
     try {
-      const [countResult, users] = await Promise.all([
+      const [countResult, rows] = await Promise.all([
         db.select({ total: count() }).from(user).where(where),
         db
-          .select({ id: user.id, name: user.name, handle: user.handle, image: user.image })
+          .select({
+            id: user.id,
+            name: user.name,
+            handle: user.handle,
+            image: user.image,
+          })
           .from(user)
           .where(where)
           .orderBy(asc(user.name), asc(user.id))
@@ -58,8 +63,7 @@ export const usersRoute = new Hono<Env>()
       ]);
       const total = countResult[0]?.total ?? 0;
       const hasMore = page * limit < total;
-
-      const ids = users.map((u) => u.id);
+      const ids = rows.map((u) => u.id);
       const friendshipRows = ids.length
         ? await db
             .select(friendshipRowSelect)
@@ -76,7 +80,7 @@ export const usersRoute = new Hono<Env>()
       );
 
       return c.json({
-        users: users.map((u) => ({ ...u, ...deriveRelationship(relationshipByUserId.get(u.id), currentUser.id) })),
+        users: rows.map((u) => ({ ...u, ...deriveRelationship(relationshipByUserId.get(u.id), currentUser.id) })),
         nextPage: hasMore ? page + 1 : null,
       });
     } catch {
