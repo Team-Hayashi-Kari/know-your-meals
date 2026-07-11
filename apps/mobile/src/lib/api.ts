@@ -4,6 +4,7 @@
 // Web は credentials: 'include' でブラウザCookieを送信し、Native は better-auth expo の Cookie を手動付与する。
 
 import type { BookmarkedPost, Me } from '@repo/api-types';
+import type { Me, SentFriendRequest } from '@repo/api-types';
 import { Platform } from 'react-native';
 import { authClient } from './auth-client';
 import { type SavedPostItem, toSavedPostItem } from './saved-posts';
@@ -116,6 +117,8 @@ export async function acceptFriendRequest(friendshipId: number): Promise<void> {
   await apiFetch(`/api/friendships/${friendshipId}`, { method: 'PATCH', body: JSON.stringify({ status: 'accepted' }) });
 }
 
+export { apiFetch } from './api-client';
+
 type UpdateMeInput = Partial<Pick<Me, 'name' | 'handle' | 'bio' | 'image'>>;
 
 // GET /api/me
@@ -149,4 +152,9 @@ export async function checkHandleAvailable(handle: string): Promise<boolean> {
     if (error instanceof ApiError && error.status === 404) return true;
     throw error;
   }
+}
+
+// GET /api/me/friend-requests?direction=sent
+export async function getSentFriendRequests(): Promise<SentFriendRequest[]> {
+  return apiFetch<SentFriendRequest[]>('/api/me/friend-requests?direction=sent');
 }
