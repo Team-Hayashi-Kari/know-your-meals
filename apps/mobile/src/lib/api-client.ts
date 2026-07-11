@@ -1,3 +1,12 @@
+// apps/mobile/src/lib/api-client.ts
+//
+// 本物のバックエンド（apps/api）を叩く fetch ラッパー。
+// better-auth/expo はセッションCookieを SecureStore に保存するだけで、
+// authClient 以外の fetch には自動で付与されないため、authClient.getCookie() で取り出して手動で付与する。
+// Web は expo-secure-store が未実装（SecureStore.getItem が存在せずクラッシュする）ため、
+// web では authClient.getCookie() を呼ばず、ブラウザの Cookie jar に任せて credentials: 'include' を使う
+// （Cookie ヘッダーは仕様上ブラウザから手動設定できないので、これがないと web は毎回401になる）。
+
 import { Platform } from 'react-native';
 import { authClient } from './auth-client';
 

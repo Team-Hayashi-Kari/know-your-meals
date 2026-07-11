@@ -58,7 +58,7 @@ export default function HomeScreen() {
 
   return (
     <YStack flex={1} backgroundColor="#000">
-      <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} userInitial={userInitial} />
+      <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} userInitial={userInitial} onPressProfile={() => router.push('/profile-edit')} />
 
       <YStack paddingBottom="$3">
         <CategoryFilterChips selected={selectedCategory} onChange={setSelectedCategory} />
