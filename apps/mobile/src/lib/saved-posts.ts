@@ -3,6 +3,7 @@
 // 画面側は shop.name / author.name のようなAPI構造を直接知らなくてよいようにする。
 
 import type { BookmarkedPost, PinEmoji } from '@repo/api-types';
+import { buildApiUrl } from './api-client';
 
 export type SavedPostItem = {
   id: string;
@@ -19,7 +20,7 @@ export function toSavedPostItem(apiPost: BookmarkedPost): SavedPostItem {
     id: String(apiPost.id),
     storeName: apiPost.shop.name,
     genreEmoji: apiPost.pin,
-    imageUri: apiPost.imageUrl,
+    imageUri: apiPost.imageUrl ? buildApiUrl(apiPost.imageUrl) : null,
     userName: apiPost.author.name,
     postedAt: apiPost.createdAt,
     comment: apiPost.comment ?? '',

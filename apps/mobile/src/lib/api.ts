@@ -1,5 +1,6 @@
-import type { Me } from '@repo/api-types';
+import type { BookmarkedPost, Me } from '@repo/api-types';
 import { ApiError, apiFetch } from './api-client';
+import { type SavedPostItem, toSavedPostItem } from './saved-posts';
 
 type UpdateMeInput = Partial<Pick<Me, 'name' | 'handle' | 'bio' | 'image'>>;
 
@@ -17,6 +18,12 @@ export async function updateMe(data: UpdateMeInput): Promise<Me> {
     },
     body: JSON.stringify(data),
   });
+}
+
+// GET /api/me/bookmarks
+export async function getBookmarkedPosts(): Promise<SavedPostItem[]> {
+  const posts = await apiFetch<BookmarkedPost[]>('/api/me/bookmarks');
+  return posts.map(toSavedPostItem);
 }
 
 // GET /api/users/:handle を流用して重複チェックする(404 なら空き、200 なら使用中)

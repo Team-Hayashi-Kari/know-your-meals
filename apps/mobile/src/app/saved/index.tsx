@@ -1,20 +1,24 @@
 import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable } from 'react-native';
-import { Spinner, Text, YStack } from 'tamagui';
+import { Button, Spinner, Text, YStack } from 'tamagui';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { PhotoSlot } from '../../components/post-flow/PhotoSlot';
 import { PinBadge } from '../../components/post-flow/PinBadge';
-import { getBookmarkedPosts } from '../../lib/mock-api';
+import { getBookmarkedPosts } from '../../lib/api';
 import type { SavedPostItem } from '../../lib/saved-posts';
 
 export default function SavedScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const [posts, setPosts] = useState<SavedPostItem[] | null>(null);
+  const [error, setError] = useState(false);
 
   const loadPosts = useCallback(() => {
-    getBookmarkedPosts().then(setPosts);
+    setError(false);
+    getBookmarkedPosts()
+      .then(setPosts)
+      .catch(() => setError(true));
   }, []);
 
   // 投稿詳細から保存解除・削除して戻ってきたときに一覧を再取得する
@@ -39,7 +43,16 @@ export default function SavedScreen() {
         </Text>
       </YStack>
 
-      {posts === null ? (
+      {error ? (
+        <YStack flex={1} justifyContent="center" alignItems="center" paddingHorizontal="$6" gap="$3">
+          <Text color="#fff" fontSize={15} fontWeight="700" textAlign="center">
+            保存済み投稿を読み込めませんでした
+          </Text>
+          <Button onPress={loadPosts} backgroundColor="#222" color="#fff" size="$3">
+            再読み込み
+          </Button>
+        </YStack>
+      ) : posts === null ? (
         <YStack flex={1} justifyContent="center" alignItems="center">
           <Spinner color="#555" />
         </YStack>
