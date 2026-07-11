@@ -439,6 +439,52 @@ const mockNearbyPosts: NearbyPost[] = [
     lat: 35.665,
     lng: 139.7,
   },
+  // 自分プロフィールのアルバム表示デモ用（FE-14）
+  {
+    id: 'p11',
+    userName: 'Takumi',
+    userInitial: 'T',
+    userColor: '#B85C5C',
+    storeName: '喫茶ひとやすみ',
+    genreEmoji: '🍰',
+    comment: 'プリンアラモードが懐かしい味',
+    imageUri: null,
+    isFriendPost: false,
+    postedAt: '2026-07-05T14:20:00+09:00',
+    distanceMeters: 200,
+    isBookmarked: false,
+    isMine: true,
+  },
+  {
+    id: 'p12',
+    userName: 'Takumi',
+    userInitial: 'T',
+    userColor: '#B85C5C',
+    storeName: '中華そば 大和',
+    genreEmoji: '🍜',
+    comment: '朝ラー最高',
+    imageUri: null,
+    isFriendPost: false,
+    postedAt: '2026-07-04T09:10:00+09:00',
+    distanceMeters: 600,
+    isBookmarked: false,
+    isMine: true,
+  },
+  {
+    id: 'p13',
+    userName: 'Takumi',
+    userInitial: 'T',
+    userColor: '#B85C5C',
+    storeName: '角打ち酒場 星',
+    genreEmoji: '🍺',
+    comment: 'ハイボールが染みる',
+    imageUri: null,
+    isFriendPost: false,
+    postedAt: '2026-07-03T21:00:00+09:00',
+    distanceMeters: 690,
+    isBookmarked: false,
+    isMine: true,
+  },
 ];
 
 // GET /api/map/posts?bbox= 相当
@@ -493,4 +539,43 @@ export async function deletePost(postId: string): Promise<void> {
   await delay(300);
   const index = mockNearbyPosts.findIndex((p) => p.id === postId);
   if (index !== -1) mockNearbyPosts.splice(index, 1);
+}
+
+// 自分のプロフィール画面（FE-14）表示用の集計値。フロント内部用の型（本物のAPIに /api/me/summary は無い）。
+// Step2で確定した方針：新規エンドポイントは作らず、既存3本の件数(.length)から組み立てる。
+//   postsCount           <- GET /api/me/posts の件数
+//   friendsCount          <- GET /api/me/friends の件数
+//   pendingReceivedCount <- GET /api/me/friend-requests?direction=received の件数
+// ProfileView が表示しない pendingSentCount・bookmarkedCount は持たない（使う画面ができたら追加する）。
+export type MyProfileSummary = {
+  postsCount: number;
+  friendsCount: number;
+  pendingReceivedCount: number;
+};
+
+// TODO(Step3): Promise.all で /api/me/posts・/api/me/friends・/api/me/friend-requests?direction=received を叩き、
+// 各配列の .length からこの形を組み立てる fetch 実装に差し替える。
+export async function getMyProfileSummary(): Promise<MyProfileSummary> {
+  await delay(200);
+  return {
+    postsCount: mockNearbyPosts.filter((p) => p.isMine).length,
+    friendsCount: 184,
+    pendingReceivedCount: 2,
+  };
+}
+
+// アルバムグリッド表示に必要な最小限のみ持つフロント内部用の型。
+// NearbyPost をそのまま使うと距離・公開範囲などアルバムに不要な項目まで本物APIの形に見えてしまうため分離。
+// 本物の GET /api/me/posts は { id: number, imageUrl: string | null, comment, pin, shop, createdAt, updatedAt } を返す
+// （apps/api/src/routes/me.ts）。id は number、画像フィールド名は imageUri でなく imageUrl。
+// TODO(Step3): 本物のAPIに差し替えるとき、id を number にし imageUrl -> imageUri へ詰め替える（他のモック投稿型との命名統一のため）。
+export type ProfileAlbumPost = {
+  id: string;
+  imageUri: string | null;
+};
+
+// GET /api/me/posts 相当（自分の投稿アルバム）
+export async function getMyPosts(): Promise<ProfileAlbumPost[]> {
+  await delay(200);
+  return mockNearbyPosts.filter((p) => p.isMine).map((p) => ({ id: p.id, imageUri: p.imageUri }));
 }
