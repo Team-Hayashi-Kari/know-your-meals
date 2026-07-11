@@ -1,6 +1,8 @@
 import type { Me } from '@repo/api-types';
 import { ApiError, apiFetch } from './api-client';
 
+export { apiFetch } from './api-client';
+
 type UpdateMeInput = Partial<Pick<Me, 'name' | 'handle' | 'bio' | 'image'>>;
 
 // GET /api/me

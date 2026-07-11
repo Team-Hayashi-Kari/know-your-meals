@@ -119,7 +119,7 @@ export default function FindFriendsScreen() {
 }
 
 function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: () => void }) {
-  const [status, setStatus] = useState(user.relationshipStatus);
+  const [status, setStatus] = useState(user.friendshipStatus);
   const [sending, setSending] = useState(false);
 
   const handleSend = async () => {
@@ -148,6 +148,10 @@ function UserRow({ user, onRequested }: { user: UserSearchResult; onRequested: (
       {status === 'pending_sent' ? (
         <Text color="#555" fontSize={13} fontWeight="600">
           申請中
+        </Text>
+      ) : status === 'request_denied' ? (
+        <Text color="#555" fontSize={13} fontWeight="600">
+          申請済み
         </Text>
       ) : (
         <Button onPress={handleSend} disabled={sending} backgroundColor="#1a1a1a" borderRadius="$4" height={36} paddingHorizontal="$4">
