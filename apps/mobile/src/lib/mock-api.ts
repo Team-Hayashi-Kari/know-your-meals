@@ -4,6 +4,28 @@
 // バックエンドが完成したら、この中の実装だけを本物の fetch() 呼び出しに差し替えます。
 // 関数名・引数・戻り値の型は API設計書（GET/PATCH /api/me など）に合わせてあります。
 
+import { Platform } from 'react-native';
+import { authClient } from './auth-client';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+
+  if (Platform.OS !== 'web') {
+    headers.Cookie = authClient.getCookie();
+  }
+
+  return fetch(`${API_URL}${path}`, {
+    ...init,
+    credentials: Platform.OS === 'web' ? 'include' : undefined,
+    headers,
+  });
+}
+
 export type MeProfile = {
   id: string;
   name: string;
@@ -12,12 +34,35 @@ export type MeProfile = {
   image: string | null;
 };
 
+// UI表示用の関係性ステータス。API の friendships.status ('pending'/'accepted'/'denied') とは別物、混同しないこと。
+export type RelationshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'friends';
+
 export type UserSearchResult = {
   id: string;
   name: string;
   handle: string;
   image: string | null;
-  relationshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'friends';
+  relationshipStatus: RelationshipStatus;
+};
+
+// GET /api/users/:handle 相当
+export type UserProfile = {
+  id: string;
+  name: string;
+  handle: string;
+  image: string | null;
+  bio: string | null;
+  postCount: number;
+  friendCount: number;
+  relationshipStatus: RelationshipStatus;
+};
+
+export type FriendUser = {
+  id: string;
+  name: string;
+  handle: string | null;
+  image: string | null;
+  bio: string | null;
 };
 
 // ---- 仮データ（本物のDBの代わり） ----
@@ -29,11 +74,43 @@ let mockMe: MeProfile = {
   image: null,
 };
 
-const mockUsers: UserSearchResult[] = [
-  { id: 'u1', name: 'Yuki Tanaka', handle: 'yuki_eats', image: null, relationshipStatus: 'pending_sent' },
-  { id: 'u2', name: 'Ryo Sato', handle: 'ryo.food', image: null, relationshipStatus: 'none' },
-  { id: 'u3', name: 'Aoi', handle: 'aoi_gohan', image: null, relationshipStatus: 'none' },
-  { id: 'u4', name: 'Takumi', handle: 'tkm.eats', image: null, relationshipStatus: 'none' },
+const mockUserProfiles: (UserSearchResult & { bio: string | null; friendCount: number })[] = [
+  {
+    id: 'u1',
+    name: 'Yuki Tanaka',
+    handle: 'yuki_eats',
+    image: null,
+    relationshipStatus: 'pending_sent',
+    bio: 'ラーメンとカフェ巡りが好き。週末は新店開拓。',
+    friendCount: 12,
+  },
+  {
+    id: 'u2',
+    name: 'Ryo Sato',
+    handle: 'ryo.food',
+    image: null,
+    relationshipStatus: 'none',
+    bio: '寿司と日本酒が好きです。',
+    friendCount: 8,
+  },
+  {
+    id: 'u3',
+    name: 'Aoi',
+    handle: 'aoi_gohan',
+    image: null,
+    relationshipStatus: 'pending_received',
+    bio: '中華料理が好きです。麻婆豆腐は必ずチェック。',
+    friendCount: 5,
+  },
+  {
+    id: 'u4',
+    name: 'Takumi',
+    handle: 'tkm.eats',
+    image: null,
+    relationshipStatus: 'friends',
+    bio: 'おにぎりと点心が好き。',
+    friendCount: 21,
+  },
 ];
 
 function delay(ms: number) {
@@ -59,14 +136,28 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
   await delay(300);
   if (!query) return [];
   const q = query.toLowerCase().replace('@', '');
-  return mockUsers.filter((u) => u.handle.includes(q) || u.name.toLowerCase().includes(q));
+  return mockUserProfiles.filter((u) => u.handle.includes(q) || u.name.toLowerCase().includes(q));
 }
 
 // GET /api/users/suggestions 相当（おすすめフレンド）
 export async function getSuggestedUsers(): Promise<UserSearchResult[]> {
   await delay(300);
   // まだフレンドでない人をおすすめとして返す
-  return mockUsers.filter((u) => u.relationshipStatus === 'none');
+  return mockUserProfiles.filter((u) => u.relationshipStatus === 'none');
+}
+
+// GET /api/me/friends
+export async function getFriends(): Promise<FriendUser[]> {
+  // ネイティブではcookieが自動送信されないため authClient.getCookie() で手動付与する
+  // (better-auth expoクライアントの標準パターン)
+  const cookie = authClient.getCookie();
+  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/me/friends`, {
+    credentials: 'include',
+    headers: cookie ? { Cookie: cookie } : undefined,
+  });
+  if (res.status === 401) throw new Error('Unauthorized');
+  if (!res.ok) throw new Error(`Failed to fetch friends (${res.status})`);
+  return res.json();
 }
 
 // GET /api/users/check-handle?handle= 相当
@@ -75,15 +166,85 @@ export async function checkHandleAvailable(handle: string): Promise<boolean> {
   await delay(300);
   const h = handle.toLowerCase().replace('@', '');
   // 既存ユーザーの handle と一致したら「使われている（false）」
-  const taken = mockUsers.some((u) => u.handle.toLowerCase() === h);
+  const taken = mockUserProfiles.some((u) => u.handle.toLowerCase() === h);
   return !taken;
 }
 
 // POST /api/friendships 相当
 export async function sendFriendRequest(userId: string): Promise<void> {
   await delay(300);
-  const target = mockUsers.find((u) => u.id === userId);
+  const target = mockUserProfiles.find((u) => u.id === userId);
   if (target) target.relationshipStatus = 'pending_sent';
+}
+
+// DELETE /api/friendships/:id 相当（送信済み申請の取消）
+export async function cancelFriendRequest(userId: string): Promise<void> {
+  await delay(300);
+  const target = mockUserProfiles.find((u) => u.id === userId);
+  if (target) target.relationshipStatus = 'none';
+}
+
+// PATCH /api/friendships/:id 相当（受信した申請の承認）
+export async function acceptFriendRequest(userId: string): Promise<void> {
+  await delay(300);
+  const target = mockUserProfiles.find((u) => u.id === userId);
+  if (target) {
+    target.relationshipStatus = 'friends';
+    target.friendCount += 1;
+  }
+}
+
+// GET /api/users/:handle 相当。非公開プロフィールは本物のAPIでは404を返す方針（Issue #78 備考）
+export async function getUserProfile(handle: string): Promise<UserProfile | undefined> {
+  await delay(300);
+  const h = handle.toLowerCase().replace('@', '');
+  const user = mockUserProfiles.find((u) => u.handle.toLowerCase() === h);
+  if (!user) return undefined;
+  return {
+    id: user.id,
+    name: user.name,
+    handle: user.handle,
+    image: user.image,
+    bio: user.bio,
+    postCount: mockNearbyPosts.filter((p) => p.userName === user.name).length,
+    friendCount: user.friendCount,
+    relationshipStatus: user.relationshipStatus,
+  };
+}
+
+// GET /api/users/:handle/posts 相当（投稿アルバム用）
+export async function getUserPosts(handle: string): Promise<NearbyPost[]> {
+  await delay(300);
+  const h = handle.toLowerCase().replace('@', '');
+  const user = mockUserProfiles.find((u) => u.handle.toLowerCase() === h);
+  if (!user) return [];
+  return mockNearbyPosts.filter((p) => p.userName === user.name);
+}
+
+// GET /api/me/friend-requests?direction=received
+export type ReceivedFriendRequest = {
+  friendshipId: number;
+  id: string;
+  handle: string | null;
+  name: string;
+  image: string | null;
+  bio: string | null;
+  mutualFriendCount: number;
+};
+
+export async function getReceivedFriendRequests(): Promise<ReceivedFriendRequest[]> {
+  const res = await apiFetch('/api/me/friend-requests?direction=received');
+  if (!res.ok) throw new Error(`failed to fetch friend requests: ${res.status}`);
+  return res.json();
+}
+
+// PATCH /api/friendships/:id
+export async function updateFriendshipRequest(friendshipId: number, data: { status: 'accepted' | 'denied' }): Promise<void> {
+  const res = await apiFetch(`/api/friendships/${friendshipId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`failed to update friendship request: ${res.status}`);
 }
 
 // pinEmojiEnum (packages/db/src/schema/content.ts) と揃える

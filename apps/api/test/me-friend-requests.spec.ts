@@ -12,6 +12,7 @@ mock.module('../src/lib/auth', () => ({
 
 const REQUEST_FROM_USER2 = {
   friendshipId: 501,
+  friendshipId: 101,
   requester: {
     id: 'user2',
     handle: 'friend-a',
@@ -25,6 +26,7 @@ const REQUEST_FROM_USER2 = {
 
 const REQUEST_FROM_USER3 = {
   friendshipId: 502,
+  friendshipId: 102,
   requester: {
     id: 'user3',
     handle: 'friend-b',
@@ -59,6 +61,8 @@ const REQUEST_TO_USER5 = {
 };
 
 let mockSelectResult: unknown[] = [];
+let mockMyFriendRows: unknown[] = [];
+let mockTheirFriendRows: unknown[] = [];
 let mockSelectError: Error | null = null;
 
 const userColumns = {
@@ -73,6 +77,7 @@ const userColumns = {
 };
 
 const friendshipColumns = {
+  id: 'friendships.id',
   requesterId: 'friendships.requesterId',
   addresseeId: 'friendships.addresseeId',
   status: 'friendships.status',
@@ -88,20 +93,35 @@ const actualDb = await import('@repo/db');
 mock.module('@repo/db', () => {
   return {
     ...actualDb,
-    createDb: () => ({
-      select: () => ({
-        from: () => ({
-          innerJoin: () => ({
-            where: () => ({
-              orderBy: async () => {
-                if (mockSelectError) throw mockSelectError;
-                return mockSelectResult;
-              },
+    createDb: () => {
+      // 1回目の select = 一覧取得クエリ、2回目 = 自分のフレンドID、3回目 = 申請者のフレンドID
+      let callIndex = 0;
+      const nextResult = () => {
+        callIndex += 1;
+        if (callIndex === 1) return mockSelectResult;
+        if (callIndex === 2) return mockMyFriendRows;
+        return mockTheirFriendRows;
+      };
+
+      return {
+        select: () => ({
+          from: () => ({
+            innerJoin: () => ({
+              where: () => ({
+                orderBy: async () => {
+                  if (mockSelectError) throw mockSelectError;
+                  return nextResult();
+                },
+              }),
             }),
+            where: async () => {
+              if (mockSelectError) throw mockSelectError;
+              return nextResult();
+            },
           }),
         }),
-      }),
-    }),
+      };
+    },
     friendships: friendshipColumns,
     user: userColumns,
   };
@@ -117,6 +137,8 @@ describe('GET /api/me/friend-requests', () => {
   beforeEach(() => {
     mockSessionValue = { user: { id: 'user1', name: 'Test User', email: 'test@example.com' } };
     mockSelectResult = [];
+    mockMyFriendRows = [];
+    mockTheirFriendRows = [];
     mockSelectError = null;
     eqMock.mockClear();
   });
@@ -166,6 +188,7 @@ describe('GET /api/me/friend-requests', () => {
       expect(body).toEqual([
         {
           friendshipId: 501,
+          friendshipId: 101,
           id: 'user2',
           handle: 'friend-a',
           name: 'Friend A',
@@ -175,6 +198,10 @@ describe('GET /api/me/friend-requests', () => {
         },
         {
           friendshipId: 502,
+          mutualFriendCount: 0,
+        },
+        {
+          friendshipId: 102,
           id: 'user3',
           handle: 'friend-b',
           name: 'Friend B',
@@ -193,6 +220,38 @@ describe('GET /api/me/friend-requests', () => {
 
       expect(res.status).toBe(200);
       expect(body[0]).not.toHaveProperty('email');
+    });
+
+    it('friendshipId を含める（PATCH /api/friendships/:id で使うため）', async () => {
+      mockSelectResult = [REQUEST_FROM_USER2];
+
+      const res = await req('/api/me/friend-requests?direction=received');
+      const body = (await res.json()) as Record<string, unknown>[];
+
+      expect(res.status).toBe(200);
+      expect(body[0]?.friendshipId).toBe(101);
+    });
+
+    it('mutualFriendCount を含める（共通フレンドがいない場合は 0）', async () => {
+      mockSelectResult = [REQUEST_FROM_USER2];
+
+      const res = await req('/api/me/friend-requests?direction=received');
+      const body = (await res.json()) as Record<string, unknown>[];
+
+      expect(res.status).toBe(200);
+      expect(body[0]?.mutualFriendCount).toBe(0);
+    });
+
+    it('自分と申請者の共通フレンド数を mutualFriendCount に返す', async () => {
+      mockSelectResult = [REQUEST_FROM_USER2];
+      mockMyFriendRows = [{ requesterId: 'user1', addresseeId: 'userX' }];
+      mockTheirFriendRows = [{ requesterId: 'user2', addresseeId: 'userX' }];
+
+      const res = await req('/api/me/friend-requests?direction=received');
+      const body = (await res.json()) as Record<string, unknown>[];
+
+      expect(res.status).toBe(200);
+      expect(body[0]?.mutualFriendCount).toBe(1);
     });
 
     it('status = pending の条件で DB 問い合わせする', async () => {
