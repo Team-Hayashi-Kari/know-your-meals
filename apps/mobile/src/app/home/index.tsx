@@ -7,8 +7,10 @@ import { MapSearchBar } from '../../components/map/MapSearchBar';
 import { NearbyPostsSheet } from '../../components/map/NearbyPostsSheet';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { ProfileMenu } from '../../components/navigation/ProfileMenu';
-import { ApiError, getMe } from '../../lib/api';
-import { getNearbyPosts, getReceivedFriendRequests, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
+import { ApiError, getMe, getReceivedFriendRequests } from '../../lib/api';
+import { ApiError as MapApiError } from '../../lib/api-client';
+import { getNearbyPosts } from '../../lib/map-api';
+import type { NearbyPost, PinEmoji } from '../../lib/mock-api';
 
 // 現在地が取得できない場合のフォールバック（渋谷駅付近）
 const FALLBACK_CENTER = { lat: 35.6595, lng: 139.7005 };
@@ -48,8 +50,16 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    getNearbyPosts(center.lat, center.lng).then(setPosts);
-  }, [center]);
+    getNearbyPosts(center)
+      .then(setPosts)
+      .catch((e) => {
+        if (e instanceof MapApiError && e.status === 401) {
+          router.replace('/');
+          return;
+        }
+        console.error('[近くの投稿取得エラー]', e);
+      });
+  }, [center, router]);
 
   useEffect(() => {
     getMe()

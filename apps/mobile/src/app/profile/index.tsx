@@ -85,14 +85,14 @@ export default function MyProfileScreen() {
       }
       primaryAction={{
         label: 'プロフィールを編集',
-        onPress: () => router.push('/profile/edit'),
+        onPress: () => router.push('/profile-edit'),
         variant: 'outline',
       }}
       links={[
-        { label: '受信した申請', badge: summary.pendingReceivedCount, onPress: () => router.push('/friend-requests/received') },
+        { label: '受信した申請', badge: summary.pendingReceivedCount, onPress: () => router.push('/friend-requests') },
         { label: '送信済み申請', onPress: () => router.push('/friend-requests/sent') },
-        { label: 'フレンド一覧', onPress: () => router.push('/friends') },
-        { label: '保存した投稿', onPress: () => router.push('/bookmarks') },
+        { label: 'フレンド一覧', onPress: () => router.push('/home/friends') },
+        { label: '保存した投稿', onPress: () => router.push('/saved') },
       ]}
       onPostPress={(postId) => router.push(`/posts/${postId}`)}
     />

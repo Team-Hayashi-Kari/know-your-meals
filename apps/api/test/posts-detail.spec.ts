@@ -32,6 +32,7 @@ type PostRow =
         lat: number;
         lng: number;
       };
+      author: { id: string; handle: string | null; name: string; image: string | null };
     }
   | undefined;
 
@@ -52,15 +53,17 @@ let mockPostRow: PostRow = {
     lat: 35.68,
     lng: 139.76,
   },
+  author: { id: 'user1', handle: 'user1handle', name: 'Test User', image: null },
 };
 
-// 単一クエリ (select().from(posts).innerJoin(shops).leftJoin(images).leftJoin(friendships).leftJoin(bookmarks).where()) を模す。
+// 単一クエリ (select().from(posts).innerJoin(shops).innerJoin(user).leftJoin(images).leftJoin(friendships).leftJoin(bookmarks).where()) を模す。
 // visibility は SQL の where 側で判定される想定なので、mockPostRow の有無だけで「見える/見えない」を表現する。
 const postWhereMock = mock(() => Promise.resolve(mockPostRow ? [mockPostRow] : []));
 const bookmarksLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ where: postWhereMock }));
 const friendshipsLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: bookmarksLeftJoinMock }));
 const imagesLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: friendshipsLeftJoinMock }));
-const innerJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: imagesLeftJoinMock }));
+const userInnerJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: imagesLeftJoinMock }));
+const innerJoinMock = mock((_table: unknown, _condition: unknown) => ({ innerJoin: userInnerJoinMock }));
 
 const selectMock = mock((_fields: unknown) => ({
   from: mock((_table: unknown) => ({
@@ -92,6 +95,7 @@ mock.module('@repo/db', () => ({
   images: { postId: 'images.postId', key: 'images.key' },
   friendships: friendshipsTable,
   bookmarks: { id: 'bookmarks.id', postId: 'bookmarks.postId', userId: 'bookmarks.userId' },
+  user: { id: 'user.id', handle: 'user.handle', name: 'user.name', image: 'user.image' },
 }));
 
 const { default: app } = await import('../src/index');
@@ -113,10 +117,12 @@ describe('GET /api/posts/:id', () => {
       imageKey: 'user1/some-uuid',
       bookmarkId: null,
       shop: { id: 10, googlePlaceId: 'place-1', name: 'Test Shop', address: '東京都渋谷区1-2-3', lat: 35.68, lng: 139.76 },
+      author: { id: 'user1', handle: 'user1handle', name: 'Test User', image: null },
     };
     eqMock.mockClear();
     selectMock.mockClear();
     innerJoinMock.mockClear();
+    userInnerJoinMock.mockClear();
     imagesLeftJoinMock.mockClear();
     friendshipsLeftJoinMock.mockClear();
     bookmarksLeftJoinMock.mockClear();

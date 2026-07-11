@@ -24,16 +24,29 @@ type PinRow = {
   lng: number;
   shopName: string;
   imageKey: string | null;
+  author: { id: string; handle: string | null; name: string; image: string | null };
 };
 
-let mockRows: PinRow[] = [{ postId: 1, pin: '🍜', userId: 'user1', lat: 35.68, lng: 139.76, shopName: 'Test Shop', imageKey: 'user1/img1' }];
+let mockRows: PinRow[] = [
+  {
+    postId: 1,
+    pin: '🍜',
+    userId: 'user1',
+    lat: 35.68,
+    lng: 139.76,
+    shopName: 'Test Shop',
+    imageKey: 'user1/img1',
+    author: { id: 'user1', handle: 'user1handle', name: 'Test User', image: null },
+  },
+];
 
 const rowsLimitMock = mock((_n: unknown) => Promise.resolve(mockRows));
 const rowsOrderByMock = mock((_col: unknown) => ({ limit: rowsLimitMock }));
 const rowsWhereMock = mock(() => ({ orderBy: rowsOrderByMock }));
 const friendshipsLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ where: rowsWhereMock }));
 const imagesLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: friendshipsLeftJoinMock }));
-const innerJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: imagesLeftJoinMock }));
+const userInnerJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: imagesLeftJoinMock }));
+const innerJoinMock = mock((_table: unknown, _condition: unknown) => ({ innerJoin: userInnerJoinMock }));
 
 const selectMock = mock((_fields: unknown) => ({
   from: mock((_table: unknown) => ({
@@ -52,10 +65,11 @@ const actualDb = await import('@repo/db');
 mock.module('@repo/db', () => ({
   ...actualDb,
   createDb: () => ({ select: selectMock }),
-  posts: { id: 'posts.id', userId: 'posts.userId', shopId: 'posts.shopId', pin: 'posts.pin', createdAt: 'posts.createdAt' },
+  posts: { id: 'posts.id', userId: 'posts.userId', shopId: 'posts.shopId', pin: 'posts.pin', comment: 'posts.comment', createdAt: 'posts.createdAt' },
   shops: { id: 'shops.id', lat: 'shops.lat', lng: 'shops.lng', name: 'shops.name' },
   images: { postId: 'images.postId', key: 'images.key' },
   friendships: friendshipsTable,
+  user: { id: 'user.id', handle: 'user.handle', name: 'user.name', image: 'user.image' },
 }));
 
 const { default: app } = await import('../src/index');
@@ -67,12 +81,24 @@ function req(path: string, init?: RequestInit) {
 describe('GET /api/map/posts', () => {
   beforeEach(() => {
     mockSessionValue = { user: { id: 'user1', name: 'Test User', email: 'test@example.com' } };
-    mockRows = [{ postId: 1, pin: '🍜', userId: 'user1', lat: 35.68, lng: 139.76, shopName: 'Test Shop', imageKey: 'user1/img1' }];
+    mockRows = [
+      {
+        postId: 1,
+        pin: '🍜',
+        userId: 'user1',
+        lat: 35.68,
+        lng: 139.76,
+        shopName: 'Test Shop',
+        imageKey: 'user1/img1',
+        author: { id: 'user1', handle: 'user1handle', name: 'Test User', image: null },
+      },
+    ];
     eqMock.mockClear();
     betweenMock.mockClear();
     descMock.mockClear();
     selectMock.mockClear();
     innerJoinMock.mockClear();
+    userInnerJoinMock.mockClear();
     imagesLeftJoinMock.mockClear();
     friendshipsLeftJoinMock.mockClear();
     rowsWhereMock.mockClear();
