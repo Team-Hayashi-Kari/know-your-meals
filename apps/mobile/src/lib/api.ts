@@ -1,11 +1,9 @@
-import type { Me, SentFriendRequest } from '@repo/api-types';
-import { ApiError, apiFetch } from './api-client';
 // apps/mobile/src/lib/api.ts
 //
 // 本番 API (apps/api) への fetch ラッパー。Issue #78 / FE-16。
 // Web は credentials: 'include' でブラウザCookieを送信し、Native は better-auth expo の Cookie を手動付与する。
 
-import type { Me } from '@repo/api-types';
+import type { Me, SentFriendRequest } from '@repo/api-types';
 import { Platform } from 'react-native';
 import { authClient } from './auth-client';
 
@@ -149,9 +147,4 @@ export async function checkHandleAvailable(handle: string): Promise<boolean> {
 // GET /api/me/friend-requests?direction=sent
 export async function getSentFriendRequests(): Promise<SentFriendRequest[]> {
   return apiFetch<SentFriendRequest[]>('/api/me/friend-requests?direction=sent');
-}
-
-// DELETE /api/friendships/:id（送信済みのフレンド申請を取消）
-export async function cancelFriendRequest(friendshipId: number): Promise<void> {
-  await apiFetch(`/api/friendships/${friendshipId}`, { method: 'DELETE' });
 }

@@ -248,14 +248,6 @@ export const me = new Hono<Env>()
           .where(and(eq(friendships.status, 'pending'), eq(friendships.addresseeId, authUser.id)))
           .orderBy(desc(friendships.createdAt));
 
-        return c.json(receivedRows.map((row) => toFriendUser(row.requester)));
-      }
-
-      // sent: 取消(DELETE /api/friendships/:id)と申請日表示に必要な friendshipId / requestedAt も一緒に返す
-      const sentRows = await db
-        .select({
-          friendshipId: friendships.id,
-          requestedAt: friendships.createdAt,
         return c.json(
           receivedRows.map((row) => ({
             friendshipId: row.friendshipId,
@@ -265,8 +257,11 @@ export const me = new Hono<Env>()
         );
       }
 
+      // sent: 取消(DELETE /api/friendships/:id)と申請日表示に必要な friendshipId / requestedAt も一緒に返す
       const sentRows = await db
         .select({
+          friendshipId: friendships.id,
+          requestedAt: friendships.createdAt,
           addressee: {
             id: addressee.id,
             handle: addressee.handle,
@@ -287,7 +282,6 @@ export const me = new Hono<Env>()
           requestedAt: row.requestedAt,
         })),
       );
-      return c.json(sentRows.map((row) => toFriendUser(row.addressee)));
     } catch {
       return c.json({ error: 'Internal server error' }, 500);
     }
