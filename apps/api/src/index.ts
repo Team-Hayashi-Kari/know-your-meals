@@ -14,7 +14,7 @@ import type { Env } from './types';
 
 const apiCors = cors({
   origin: (origin) => {
-    const allowed = ['http://localhost:8081', 'https://know-your-meals.pages.dev'];
+    const allowed = ['http://localhost:8081', 'http://127.0.0.1:8081', 'https://know-your-meals.pages.dev'];
     if (!origin) return null;
     if (allowed.includes(origin) || origin.startsWith('exp://')) return origin;
     return null;
@@ -28,6 +28,7 @@ const app = new Hono<Env>()
   .get('/health', (c) => c.json({ status: 'ok' }))
   .use('/api/auth/*', apiCors)
   .use('/api/me', apiCors)
+  .use('/api/me/*', apiCors)
   .use('/api/places/*', apiCors)
   .use('/api/shops/*', apiCors)
   .use('/api/posts/*', apiCors)
