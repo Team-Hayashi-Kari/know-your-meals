@@ -5,6 +5,7 @@ import { CategoryFilterChips } from '../../components/map/CategoryFilterChips';
 import { GoogleMapView } from '../../components/map/GoogleMapView';
 import { MapSearchBar } from '../../components/map/MapSearchBar';
 import { NearbyPostsSheet } from '../../components/map/NearbyPostsSheet';
+import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { getMe, getNearbyPosts, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
 
 // 現在地が取得できない場合のフォールバック（渋谷駅付近）
@@ -72,6 +73,8 @@ export default function HomeScreen() {
         <GoogleMapView center={center} posts={visiblePosts} onPressPost={goToPostDetail} />
         <NearbyPostsSheet posts={visiblePosts} onPressPost={goToPostDetail} />
       </YStack>
+
+      <BottomTabBar />
     </YStack>
   );
 }

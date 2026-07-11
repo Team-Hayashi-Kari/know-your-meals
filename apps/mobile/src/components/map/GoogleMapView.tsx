@@ -1,4 +1,4 @@
-import { AdvancedMarker, APIProvider, Map as GoogleMap, useApiIsLoaded, useApiLoadingStatus } from '@vis.gl/react-google-maps';
+import { AdvancedMarker, APIProvider, Map as GoogleMap, useApiIsLoaded, useApiLoadingStatus, useMap } from '@vis.gl/react-google-maps';
 import { Component, type ReactNode, useEffect, useState } from 'react';
 import { Text, YStack } from 'tamagui';
 import type { NearbyPost } from '../../lib/mock-api';
@@ -91,6 +91,15 @@ export function GoogleMapView({ center, posts, onPressPost }: GoogleMapViewProps
   );
 }
 
+// ponytail: Map の子として useMap() 経由で panTo を呼ぶ。defaultCenter（uncontrolled）を維持しつつ位置更新時のみ移動。
+function MapPanController({ center }: { center: { lat: number; lng: number } }) {
+  const map = useMap();
+  useEffect(() => {
+    if (map) map.panTo(center);
+  }, [map, center]);
+  return null;
+}
+
 function MapInner({ center, posts, onPressPost }: GoogleMapViewProps) {
   const isLoaded = useApiIsLoaded();
   const loadingStatus = useApiLoadingStatus();
@@ -131,6 +140,7 @@ function MapInner({ center, posts, onPressPost }: GoogleMapViewProps) {
           style={{ width: '100%', height: '100%' }}
           colorScheme="DARK"
         >
+          <MapPanController center={center} />
           {/* 現在地マーカー */}
           <AdvancedMarker position={center}>
             <div
