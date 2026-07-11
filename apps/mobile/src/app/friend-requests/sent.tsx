@@ -1,8 +1,8 @@
 import type { SentFriendRequest } from '@repo/api-types';
 import { getAvatarColor, getAvatarInitial } from '@repo/shared';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Dimensions, Modal, Pressable, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Button, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
 import { Avatar } from '../../components/post-flow/Avatar';
@@ -73,9 +73,12 @@ export default function SentFriendRequestsScreen() {
   );
 }
 
+const POPUP_WIDTH = 230;
+
 function RequestRow({ request, onCancelled }: { request: SentFriendRequest; onCancelled: (friendshipId: number) => void }) {
   const router = useRouter();
-  const [confirming, setConfirming] = useState(false);
+  const buttonRef = useRef<View>(null);
+  const [anchor, setAnchor] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
@@ -84,6 +87,16 @@ function RequestRow({ request, onCancelled }: { request: SentFriendRequest; onCa
     if (!request.handle) return;
     router.push(`/users/${request.handle}`);
   };
+
+  // ボタンの画面上の座標を計測してからポップアップを開く（Modalはツリーの外にポータルされるため、
+  // 親のtransform等に影響されず正しい位置に配置できる）
+  const openConfirm = () => {
+    buttonRef.current?.measureInWindow((x, y, width, height) => {
+      setAnchor({ top: y, left: x, width, height });
+    });
+  };
+
+  const closeConfirm = () => setAnchor(null);
 
   const handleCancel = async () => {
     setCancelling(true);
@@ -97,6 +110,27 @@ function RequestRow({ request, onCancelled }: { request: SentFriendRequest; onCa
       setCancelling(false);
     }
   };
+
+  // handle が null (プロフィール未設定ユーザー) の場合は "@null" にならないよう name にフォールバックする
+  const targetLabel = request.handle ? `@${request.handle}` : request.name;
+
+  const popupContent = (
+    <>
+      <Pressable onPress={handleCancel} disabled={cancelling}>
+        <XStack alignItems="center" gap="$3" opacity={cancelling ? 0.5 : 1}>
+          <Text color="#fff" fontSize={14} lineHeight={19} flex={1}>
+            {cancelling ? '取消中…' : `${targetLabel} さんへの申請を取り消す`}
+          </Text>
+          <RemovePersonIcon color="#e74c3c" />
+        </XStack>
+      </Pressable>
+      {cancelError ? (
+        <Text color="#e74c3c" fontSize={12} marginTop="$2">
+          {cancelError}
+        </Text>
+      ) : null}
+    </>
+  );
 
   return (
     <YStack position="relative">
@@ -117,56 +151,45 @@ function RequestRow({ request, onCancelled }: { request: SentFriendRequest; onCa
             </YStack>
           </XStack>
         </Pressable>
-        <Button
-          onPress={() => setConfirming((prev) => !prev)}
-          disabled={cancelling}
-          backgroundColor="#1a1a1a"
-          borderRadius="$4"
-          height={36}
-          paddingHorizontal="$4"
-        >
-          <Text color="#e74c3c" fontSize={13} fontWeight="700">
-            取り消す
-          </Text>
-        </Button>
+        <View ref={buttonRef} collapsable={false}>
+          <Button onPress={openConfirm} disabled={cancelling} backgroundColor="#1a1a1a" borderRadius="$4" height={36} paddingHorizontal="$4">
+            <Text color="#e74c3c" fontSize={13} fontWeight="700">
+              取り消す
+            </Text>
+          </Button>
+        </View>
       </XStack>
 
-      {confirming ? (
-        <>
-          {/* ポップアップ外タップで閉じる（画面全体を覆う透明レイヤー） */}
-          {/* biome-ignore lint/suspicious/noExplicitAny: RNWのみのposition値'fixed'を使うため */}
-          <Pressable onPress={() => setConfirming(false)} style={{ position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }} />
-          <YStack
-            position="absolute"
-            top={44}
-            right={0}
-            zIndex={11}
-            width={230}
-            backgroundColor="#1c1c1e"
-            borderWidth={1}
-            borderColor="#2a2a2a"
-            borderRadius="$4"
-            padding="$3"
-            shadowColor="#000"
-            shadowOpacity={0.5}
-            shadowRadius={12}
-            shadowOffset={{ width: 0, height: 4 }}
-          >
-            <Pressable onPress={handleCancel} disabled={cancelling}>
-              <XStack alignItems="center" gap="$3" opacity={cancelling ? 0.5 : 1}>
-                <Text color="#fff" fontSize={14} lineHeight={19} flex={1}>
-                  {cancelling ? '取消中…' : `@${request.handle} さんへの申請を取り消す`}
-                </Text>
-                <RemovePersonIcon color="#e74c3c" />
-              </XStack>
+      {/* Modalはツリーの外(ルート)にポータルされるため、祖先のtransform等に影響されず
+          画面全体を確実に覆える。外タップで閉じ、ポップアップ自体はボタンの計測座標付近に配置する */}
+      {anchor ? (
+        <Modal transparent visible animationType="fade" onRequestClose={closeConfirm}>
+          <Pressable style={{ flex: 1 }} onPress={closeConfirm}>
+            <Pressable
+              onPress={(e) => e.stopPropagation()}
+              style={{
+                position: 'absolute',
+                top: anchor.top + anchor.height + 8,
+                left: Math.min(Math.max(8, anchor.left + anchor.width - POPUP_WIDTH), Dimensions.get('window').width - POPUP_WIDTH - 8),
+              }}
+            >
+              <YStack
+                width={POPUP_WIDTH}
+                backgroundColor="#1c1c1e"
+                borderWidth={1}
+                borderColor="#2a2a2a"
+                borderRadius="$4"
+                padding="$3"
+                shadowColor="#000"
+                shadowOpacity={0.5}
+                shadowRadius={12}
+                shadowOffset={{ width: 0, height: 4 }}
+              >
+                {popupContent}
+              </YStack>
             </Pressable>
-            {cancelError ? (
-              <Text color="#e74c3c" fontSize={12} marginTop="$2">
-                {cancelError}
-              </Text>
-            ) : null}
-          </YStack>
-        </>
+          </Pressable>
+        </Modal>
       ) : null}
     </YStack>
   );
