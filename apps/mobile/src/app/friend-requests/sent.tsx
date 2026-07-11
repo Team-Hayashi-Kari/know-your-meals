@@ -3,6 +3,7 @@ import { getAvatarColor, getAvatarInitial } from '@repo/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { Button, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
 import { Avatar } from '../../components/post-flow/Avatar';
 import { MiniHeader } from '../../components/post-flow/MiniHeader';
@@ -98,7 +99,7 @@ function RequestRow({ request, onCancelled }: { request: SentFriendRequest; onCa
   };
 
   return (
-    <YStack>
+    <YStack position="relative">
       <XStack alignItems="center" gap="$3">
         <Pressable onPress={goToProfile} hitSlop={4} style={{ flex: 1 }}>
           <XStack alignItems="center" gap="$3">
@@ -131,30 +132,53 @@ function RequestRow({ request, onCancelled }: { request: SentFriendRequest; onCa
       </XStack>
 
       {confirming ? (
-        <YStack marginTop="$2" backgroundColor="#151517" borderRadius="$4" padding="$3" gap="$3">
-          <Text color="#ddd" fontSize={13}>
-            申請を取り消しますか？
-          </Text>
-          {cancelError ? (
-            <Text color="#e74c3c" fontSize={12}>
-              {cancelError}
-            </Text>
-          ) : null}
-          <XStack gap="$3">
-            <Button onPress={handleCancel} disabled={cancelling} backgroundColor="#e74c3c" borderRadius="$4" height={36} paddingHorizontal="$4">
-              <Text color="#fff" fontSize={13} fontWeight="700">
-                {cancelling ? '取消中…' : '申請取り消し'}
+        <>
+          {/* ポップアップ外タップで閉じる（画面全体を覆う透明レイヤー） */}
+          {/* biome-ignore lint/suspicious/noExplicitAny: RNWのみのposition値'fixed'を使うため */}
+          <Pressable onPress={() => setConfirming(false)} style={{ position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }} />
+          <YStack
+            position="absolute"
+            top={44}
+            right={0}
+            zIndex={11}
+            width={230}
+            backgroundColor="#1c1c1e"
+            borderWidth={1}
+            borderColor="#2a2a2a"
+            borderRadius="$4"
+            padding="$3"
+            shadowColor="#000"
+            shadowOpacity={0.5}
+            shadowRadius={12}
+            shadowOffset={{ width: 0, height: 4 }}
+          >
+            <Pressable onPress={handleCancel} disabled={cancelling}>
+              <XStack alignItems="center" gap="$3" opacity={cancelling ? 0.5 : 1}>
+                <Text color="#fff" fontSize={14} lineHeight={19} flex={1}>
+                  {cancelling ? '取消中…' : `@${request.handle} さんへの申請を取り消す`}
+                </Text>
+                <RemovePersonIcon color="#e74c3c" />
+              </XStack>
+            </Pressable>
+            {cancelError ? (
+              <Text color="#e74c3c" fontSize={12} marginTop="$2">
+                {cancelError}
               </Text>
-            </Button>
-            <Button onPress={() => setConfirming(false)} disabled={cancelling} backgroundColor="transparent" height={36} paddingHorizontal="$2">
-              <Text color="#888" fontSize={13} fontWeight="600">
-                やめる
-              </Text>
-            </Button>
-          </XStack>
-        </YStack>
+            ) : null}
+          </YStack>
+        </>
       ) : null}
     </YStack>
+  );
+}
+
+function RemovePersonIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Circle cx={9} cy={7} r={3.2} />
+      <Path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
+      <Path d="M17 8l4 4M21 8l-4 4" />
+    </Svg>
   );
 }
 
