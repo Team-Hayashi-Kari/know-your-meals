@@ -120,7 +120,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: true,
     postedAt: '2026-07-09T22:20:00+09:00',
     distanceMeters: 320,
-    isBookmarked: false,
+    isBookmarked: true,
     isMine: false,
     lat: 35.662,
     lng: 139.7038,
@@ -137,7 +137,7 @@ const mockNearbyPosts: NearbyPost[] = [
     isFriendPost: false,
     postedAt: '2026-07-09T19:05:00+09:00',
     distanceMeters: 540,
-    isBookmarked: false,
+    isBookmarked: true,
     isMine: false,
     lat: 35.657,
     lng: 139.698,
@@ -296,6 +296,19 @@ export async function getPostById(id: string): Promise<NearbyPost | undefined> {
   return mockNearbyPosts.find((p) => p.id === id);
 }
 
+// 保存した順（bookmarks.createdAt相当）を仮データ上で再現するための記録。本物はDBのbookmarksテーブルが持つ。
+const bookmarkedAtByPostId = new Map<string, number>(mockNearbyPosts.filter((p) => p.isBookmarked).map((p, index) => [p.id, index]));
+
+// 保存済み一覧画面が実際に使うフィールドのみの型。GET /api/me/bookmarks が返す形に合わせやすくするため、
+// distanceMeters/lat/lng など保存一覧に不要な NearbyPost のフィールドを持ち込まない。
+export type BookmarkedPost = Pick<NearbyPost, 'id' | 'storeName' | 'genreEmoji' | 'imageUri' | 'userName' | 'postedAt' | 'comment'>;
+
+// GET /api/me/bookmarks 相当。実APIは投稿日時ではなく「保存した日時」の降順で返す。
+export async function getBookmarkedPosts(): Promise<BookmarkedPost[]> {
+  await delay(300);
+  return mockNearbyPosts.filter((p) => p.isBookmarked).sort((a, b) => (bookmarkedAtByPostId.get(b.id) ?? 0) - (bookmarkedAtByPostId.get(a.id) ?? 0));
+}
+
 // POST /api/posts 相当（multipart）
 export async function createPost(draft: { storeId: string; comment: string; pin: PinEmoji; imageUri: string | null }): Promise<NearbyPost> {
   await delay(500);
@@ -324,7 +337,13 @@ export async function createPost(draft: { storeId: string; comment: string; pin:
 export async function toggleBookmark(postId: string): Promise<void> {
   await delay(200);
   const post = mockNearbyPosts.find((p) => p.id === postId);
-  if (post) post.isBookmarked = !post.isBookmarked;
+  if (!post) return;
+  post.isBookmarked = !post.isBookmarked;
+  if (post.isBookmarked) {
+    bookmarkedAtByPostId.set(postId, Date.now());
+  } else {
+    bookmarkedAtByPostId.delete(postId);
+  }
 }
 
 // DELETE /api/posts/:id 相当（本人のみ、PR #115でバックエンド実装中）
