@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { YStack } from 'tamagui';
+import { Button, Text, YStack } from 'tamagui';
 import { CategoryFilterChips } from '../../components/map/CategoryFilterChips';
 import { GoogleMapView } from '../../components/map/GoogleMapView';
 import { MapSearchBar } from '../../components/map/MapSearchBar';
@@ -62,6 +62,11 @@ export default function HomeScreen() {
 
       <YStack paddingBottom="$3">
         <CategoryFilterChips selected={selectedCategory} onChange={setSelectedCategory} />
+        <Button onPress={() => router.push('/home/friends')} backgroundColor="#1a1a1a" borderRadius="$4" marginHorizontal="$4" marginTop="$3">
+          <Text color="#fff" fontSize={14} fontWeight="600">
+            フレンド一覧
+          </Text>
+        </Button>
       </YStack>
 
       <YStack flex={1} position="relative">
