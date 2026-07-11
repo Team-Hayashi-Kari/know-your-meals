@@ -1,7 +1,7 @@
 import { PIN_EMOJIS } from '@repo/shared';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView } from 'react-native';
+import { Pressable, ScrollView } from 'react-native';
 import { Text, TextArea, XStack, YStack } from 'tamagui';
 import { MiniHeader } from '../../components/post-flow/MiniHeader';
 import { PhotoSlot } from '../../components/post-flow/PhotoSlot';
@@ -100,9 +100,9 @@ export default function PostCreateScreen() {
           </Text>
           <XStack flexWrap="wrap" gap="$3">
             {PIN_EMOJIS.map((emoji) => (
-              <YStack key={emoji} onPress={() => setPin(emoji)} accessibilityRole="button" accessibilityLabel={`ピン ${emoji} を選択`}>
+              <Pressable key={emoji} onPress={() => setPin(emoji)} accessibilityRole="button" accessibilityLabel={`ピン ${emoji} を選択`}>
                 <PinBadge emoji={emoji} selected={pin === emoji} />
-              </YStack>
+              </Pressable>
             ))}
           </XStack>
         </YStack>
