@@ -1,14 +1,12 @@
-import type { BookmarkedPost, Me } from '@repo/api-types';
-import { ApiError, apiFetch } from './api-client';
-import { type SavedPostItem, toSavedPostItem } from './saved-posts';
 // apps/mobile/src/lib/api.ts
 //
 // 本番 API (apps/api) への fetch ラッパー。Issue #78 / FE-16。
 // Web は credentials: 'include' でブラウザCookieを送信し、Native は better-auth expo の Cookie を手動付与する。
 
-import type { Me } from '@repo/api-types';
+import type { BookmarkedPost, Me } from '@repo/api-types';
 import { Platform } from 'react-native';
 import { authClient } from './auth-client';
+import { type SavedPostItem, toSavedPostItem } from './saved-posts';
 
 export class ApiError extends Error {
   status: number;
