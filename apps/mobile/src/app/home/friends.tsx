@@ -38,9 +38,14 @@ export default function FriendsScreen() {
         paddingBottom: 32,
       }}
     >
-      <Text color="#fff" fontSize={32} fontWeight="800" lineHeight={38} marginBottom="$2">
-        フレンド一覧
-      </Text>
+      <XStack alignItems="center" gap="$3" marginBottom="$2">
+        <Text color="#fff" fontSize={22} onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))}>
+          ←
+        </Text>
+        <Text color="#fff" fontSize={32} fontWeight="800" lineHeight={38}>
+          フレンド一覧
+        </Text>
+      </XStack>
       <Text color="#555" fontSize={14} marginBottom="$5">
         名前またはIDで検索
       </Text>
