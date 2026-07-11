@@ -213,8 +213,6 @@ export const me = new Hono<Env>()
     const db = createDb(c.env.DATABASE_URL);
 
     try {
-      let rows: FriendUser[] = [];
-
       if (direction === 'received') {
         const receivedRows = await db
           .select({
@@ -231,27 +229,34 @@ export const me = new Hono<Env>()
           .where(and(eq(friendships.status, 'pending'), eq(friendships.addresseeId, authUser.id)))
           .orderBy(desc(friendships.createdAt));
 
-        rows = receivedRows.map((row) => toFriendUser(row.requester));
-      } else {
-        const sentRows = await db
-          .select({
-            addressee: {
-              id: addressee.id,
-              handle: addressee.handle,
-              name: addressee.name,
-              image: addressee.image,
-              bio: addressee.bio,
-            },
-          })
-          .from(friendships)
-          .innerJoin(addressee, eq(friendships.addresseeId, addressee.id))
-          .where(and(eq(friendships.status, 'pending'), eq(friendships.requesterId, authUser.id)))
-          .orderBy(desc(friendships.createdAt));
-
-        rows = sentRows.map((row) => toFriendUser(row.addressee));
+        return c.json(receivedRows.map((row) => toFriendUser(row.requester)));
       }
 
-      return c.json(rows);
+      // sent: 取消(DELETE /api/friendships/:id)と申請日表示に必要な friendshipId / requestedAt も一緒に返す
+      const sentRows = await db
+        .select({
+          friendshipId: friendships.id,
+          requestedAt: friendships.createdAt,
+          addressee: {
+            id: addressee.id,
+            handle: addressee.handle,
+            name: addressee.name,
+            image: addressee.image,
+            bio: addressee.bio,
+          },
+        })
+        .from(friendships)
+        .innerJoin(addressee, eq(friendships.addresseeId, addressee.id))
+        .where(and(eq(friendships.status, 'pending'), eq(friendships.requesterId, authUser.id)))
+        .orderBy(desc(friendships.createdAt));
+
+      return c.json(
+        sentRows.map((row) => ({
+          ...toFriendUser(row.addressee),
+          friendshipId: row.friendshipId,
+          requestedAt: row.requestedAt,
+        })),
+      );
     } catch {
       return c.json({ error: 'Internal server error' }, 500);
     }

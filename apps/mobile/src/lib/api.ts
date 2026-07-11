@@ -1,4 +1,4 @@
-import type { Me } from '@repo/api-types';
+import type { Me, SentFriendRequest } from '@repo/api-types';
 import { ApiError, apiFetch } from './api-client';
 
 type UpdateMeInput = Partial<Pick<Me, 'name' | 'handle' | 'bio' | 'image'>>;
@@ -28,4 +28,14 @@ export async function checkHandleAvailable(handle: string): Promise<boolean> {
     if (error instanceof ApiError && error.status === 404) return true;
     throw error;
   }
+}
+
+// GET /api/me/friend-requests?direction=sent
+export async function getSentFriendRequests(): Promise<SentFriendRequest[]> {
+  return apiFetch<SentFriendRequest[]>('/api/me/friend-requests?direction=sent');
+}
+
+// DELETE /api/friendships/:id（送信済みのフレンド申請を取消）
+export async function cancelFriendRequest(friendshipId: number): Promise<void> {
+  await apiFetch(`/api/friendships/${friendshipId}`, { method: 'DELETE' });
 }

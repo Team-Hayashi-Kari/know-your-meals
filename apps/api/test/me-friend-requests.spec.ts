@@ -33,6 +33,8 @@ const REQUEST_FROM_USER3 = {
 };
 
 const REQUEST_TO_USER4 = {
+  friendshipId: 10,
+  requestedAt: '2026-07-01T00:00:00.000Z',
   addressee: {
     id: 'user4',
     handle: 'friend-c',
@@ -44,6 +46,8 @@ const REQUEST_TO_USER4 = {
 };
 
 const REQUEST_TO_USER5 = {
+  friendshipId: 11,
+  requestedAt: '2026-06-25T00:00:00.000Z',
   addressee: {
     id: 'user5',
     handle: 'friend-d',
@@ -230,6 +234,8 @@ describe('GET /api/me/friend-requests', () => {
       expect(res.status).toBe(200);
       expect(body).toEqual([
         {
+          friendshipId: 10,
+          requestedAt: '2026-07-01T00:00:00.000Z',
           id: 'user4',
           handle: 'friend-c',
           name: 'Friend C',
@@ -237,6 +243,8 @@ describe('GET /api/me/friend-requests', () => {
           bio: 'curry',
         },
         {
+          friendshipId: 11,
+          requestedAt: '2026-06-25T00:00:00.000Z',
           id: 'user5',
           handle: 'friend-d',
           name: 'Friend D',
