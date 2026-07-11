@@ -5,12 +5,13 @@ import { Spinner, Text, YStack } from 'tamagui';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { PhotoSlot } from '../../components/post-flow/PhotoSlot';
 import { PinBadge } from '../../components/post-flow/PinBadge';
-import { type BookmarkedPost, getBookmarkedPosts } from '../../lib/mock-api';
+import { getBookmarkedPosts } from '../../lib/mock-api';
+import type { SavedPostItem } from '../../lib/saved-posts';
 
 export default function SavedScreen() {
   const router = useRouter();
   const pathname = usePathname();
-  const [posts, setPosts] = useState<BookmarkedPost[] | null>(null);
+  const [posts, setPosts] = useState<SavedPostItem[] | null>(null);
 
   const loadPosts = useCallback(() => {
     getBookmarkedPosts().then(setPosts);
@@ -68,7 +69,7 @@ export default function SavedScreen() {
   );
 }
 
-function SavedPostTile({ post, onPress }: { post: BookmarkedPost; onPress: () => void }) {
+function SavedPostTile({ post, onPress }: { post: SavedPostItem; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${post.storeName}の投稿を開く`} style={{ width: '47.5%' }}>
       <YStack gap="$2" marginBottom="$4">

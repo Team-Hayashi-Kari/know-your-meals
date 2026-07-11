@@ -301,6 +301,7 @@ const bookmarkedAtByPostId = new Map<string, number>(mockNearbyPosts.filter((p) 
 
 // 保存済み一覧画面が実際に使うフィールドのみの型。GET /api/me/bookmarks が返す形に合わせやすくするため、
 // distanceMeters/lat/lng など保存一覧に不要な NearbyPost のフィールドを持ち込まない。
+// 画面側の契約型は SavedPostItem（saved-posts.ts）。フィールド構成はそれと揃えてある。
 export type BookmarkedPost = Pick<NearbyPost, 'id' | 'storeName' | 'genreEmoji' | 'imageUri' | 'userName' | 'postedAt' | 'comment'>;
 
 // GET /api/me/bookmarks 相当。実APIは投稿日時ではなく「保存した日時」の降順で返す。
