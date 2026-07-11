@@ -45,8 +45,9 @@ export default function PostCreateScreen() {
         pin,
         image: draft.imageBlob,
       });
+      const storeName = draft.store.name;
       clearDraft();
-      router.replace('/post/done');
+      router.replace({ pathname: '/post/done', params: { storeName, pin, comment: comment.trim() } });
     } catch {
       setSubmitError(true);
     } finally {
