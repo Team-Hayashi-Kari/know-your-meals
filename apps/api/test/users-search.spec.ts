@@ -29,16 +29,6 @@ const lazyThenable = () => ({
 
 const mockDb = {
   select: (_fields?: unknown) => ({
-    from: () => {
-      const whereChain = () => {
-        const promise = selectFromWhereMock();
-        // count クエリは where() を直接 await、select クエリは orderBy チェーンを使う
-        return Object.assign(promise, {
-          orderBy: () => ({ limit: () => ({ offset: () => selectFromWhereMock() }) }),
-        });
-      };
-      return { leftJoin: () => ({ where: whereChain }), where: whereChain };
-    },
     from: () => ({
       where: () => ({
         ...lazyThenable(),

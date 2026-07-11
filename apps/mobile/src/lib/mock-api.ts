@@ -2,14 +2,13 @@
 //
 // 🔧 モックAPIです。バックエンド未実装の機能はここに残し、実装済みのものは本物の fetch() に差し替えます。
 
-import { apiFetch } from './api';
-
 import { Platform } from 'react-native';
+import { apiFetch } from './api';
 import { authClient } from './auth-client';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+async function rawApiFetch(path: string, init?: RequestInit): Promise<Response> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(init?.headers as Record<string, string> | undefined),
@@ -137,26 +136,20 @@ type ApiSearchUser = {
   name: string;
   handle: string | null;
   image: string | null;
-  friendshipStatus: UserSearchResult['friendshipStatus'];
+  relationshipStatus: RelationshipStatus;
+  friendshipId: number | null;
 };
 
 // GET /api/users/search?q=
 export async function searchUsers(query: string): Promise<UserSearchResult[]> {
   if (!query.trim()) return [];
   const data = await apiFetch<{ users: ApiSearchUser[] }>(`/api/users/search?q=${encodeURIComponent(query)}`);
-  return (data.users ?? []).map((u) => ({ ...u, handle: u.handle ?? '' }));
-  await delay(300);
-  if (!query) return [];
-  const q = query.toLowerCase().replace('@', '');
-  return mockUserProfiles.filter((u) => u.handle.includes(q) || u.name.toLowerCase().includes(q));
+  return (data.users ?? []).map((u) => ({ ...u, handle: u.handle ?? '', friendshipStatus: u.relationshipStatus }));
 }
 
 // バックエンドにエンドポイントなし → 空配列（検索ファーストUX）
 export async function getSuggestedUsers(): Promise<UserSearchResult[]> {
   return [];
-  await delay(300);
-  // まだフレンドでない人をおすすめとして返す
-  return mockUserProfiles.filter((u) => u.relationshipStatus === 'none');
 }
 
 // GET /api/me/friends
@@ -178,10 +171,6 @@ export async function checkHandleAvailable(handle: string): Promise<boolean> {
   await delay(300);
   void handle;
   return true;
-  const h = handle.toLowerCase().replace('@', '');
-  // 既存ユーザーの handle と一致したら「使われている（false）」
-  const taken = mockUserProfiles.some((u) => u.handle.toLowerCase() === h);
-  return !taken;
 }
 
 // POST /api/friendships
@@ -252,14 +241,14 @@ export type ReceivedFriendRequest = {
 };
 
 export async function getReceivedFriendRequests(): Promise<ReceivedFriendRequest[]> {
-  const res = await apiFetch('/api/me/friend-requests?direction=received');
+  const res = await rawApiFetch('/api/me/friend-requests?direction=received');
   if (!res.ok) throw new Error(`failed to fetch friend requests: ${res.status}`);
   return res.json();
 }
 
 // PATCH /api/friendships/:id
 export async function updateFriendshipRequest(friendshipId: number, data: { status: 'accepted' | 'denied' }): Promise<void> {
-  const res = await apiFetch(`/api/friendships/${friendshipId}`, {
+  const res = await rawApiFetch(`/api/friendships/${friendshipId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   });

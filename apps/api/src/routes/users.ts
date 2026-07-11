@@ -15,15 +15,6 @@ const friendshipRowSelect = {
 const LIMIT_DEFAULT = 20;
 const LIMIT_MAX = 50;
 
-type FriendshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'friends' | 'request_denied';
-
-function toFriendshipStatus(status: string | null, requesterId: string | null, currentUserId: string): FriendshipStatus {
-  if (status === 'accepted') return 'friends';
-  if (status === 'pending') return requesterId === currentUserId ? 'pending_sent' : 'pending_received';
-  if (status === 'denied' && requesterId === currentUserId) return 'request_denied';
-  return 'none';
-}
-
 export const usersRoute = new Hono<Env>()
   .get('/search', requireAuth, async (c) => {
     const currentUser = c.get('user');
@@ -63,11 +54,8 @@ export const usersRoute = new Hono<Env>()
             name: user.name,
             handle: user.handle,
             image: user.image,
-            friendshipStatus: friendships.status,
-            requesterId: friendships.requesterId,
           })
           .from(user)
-          .leftJoin(friendships, friendshipPairCondition(currentUser.id, user.id))
           .where(where)
           .orderBy(asc(user.name), asc(user.id))
           .limit(limit)
@@ -75,13 +63,7 @@ export const usersRoute = new Hono<Env>()
       ]);
       const total = countResult[0]?.total ?? 0;
       const hasMore = page * limit < total;
-      const users = rows.map(({ friendshipStatus, requesterId, ...u }) => ({
-        ...u,
-        friendshipStatus: toFriendshipStatus(friendshipStatus, requesterId, currentUser.id),
-      }));
-      return c.json({ users, nextPage: hasMore ? page + 1 : null });
-
-      const ids = users.map((u) => u.id);
+      const ids = rows.map((u) => u.id);
       const friendshipRows = ids.length
         ? await db
             .select(friendshipRowSelect)
@@ -98,7 +80,7 @@ export const usersRoute = new Hono<Env>()
       );
 
       return c.json({
-        users: users.map((u) => ({ ...u, ...deriveRelationship(relationshipByUserId.get(u.id), currentUser.id) })),
+        users: rows.map((u) => ({ ...u, ...deriveRelationship(relationshipByUserId.get(u.id), currentUser.id) })),
         nextPage: hasMore ? page + 1 : null,
       });
     } catch {
