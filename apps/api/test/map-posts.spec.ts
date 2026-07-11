@@ -13,7 +13,8 @@ mock.module('../src/lib/auth', () => ({
 const actualDrizzleOrm = await import('drizzle-orm');
 const eqMock = mock((column: unknown, value: unknown) => ({ type: 'eq', column, value }));
 const betweenMock = mock((column: unknown, min: unknown, max: unknown) => ({ type: 'between', column, min, max }));
-mock.module('drizzle-orm', () => ({ ...actualDrizzleOrm, eq: eqMock, between: betweenMock }));
+const descMock = mock((column: unknown) => ({ type: 'desc', column }));
+mock.module('drizzle-orm', () => ({ ...actualDrizzleOrm, eq: eqMock, between: betweenMock, desc: descMock }));
 
 type PinRow = {
   postId: number;
@@ -28,7 +29,8 @@ type PinRow = {
 let mockRows: PinRow[] = [{ postId: 1, pin: '🍜', userId: 'user1', lat: 35.68, lng: 139.76, shopName: 'Test Shop', imageKey: 'user1/img1' }];
 
 const rowsLimitMock = mock((_n: unknown) => Promise.resolve(mockRows));
-const rowsWhereMock = mock(() => ({ limit: rowsLimitMock }));
+const rowsOrderByMock = mock((_col: unknown) => ({ limit: rowsLimitMock }));
+const rowsWhereMock = mock(() => ({ orderBy: rowsOrderByMock }));
 const friendshipsLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ where: rowsWhereMock }));
 const imagesLeftJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: friendshipsLeftJoinMock }));
 const innerJoinMock = mock((_table: unknown, _condition: unknown) => ({ leftJoin: imagesLeftJoinMock }));
@@ -50,7 +52,7 @@ const actualDb = await import('@repo/db');
 mock.module('@repo/db', () => ({
   ...actualDb,
   createDb: () => ({ select: selectMock }),
-  posts: { id: 'posts.id', userId: 'posts.userId', shopId: 'posts.shopId', pin: 'posts.pin' },
+  posts: { id: 'posts.id', userId: 'posts.userId', shopId: 'posts.shopId', pin: 'posts.pin', createdAt: 'posts.createdAt' },
   shops: { id: 'shops.id', lat: 'shops.lat', lng: 'shops.lng', name: 'shops.name' },
   images: { postId: 'images.postId', key: 'images.key' },
   friendships: friendshipsTable,
@@ -68,11 +70,13 @@ describe('GET /api/map/posts', () => {
     mockRows = [{ postId: 1, pin: '🍜', userId: 'user1', lat: 35.68, lng: 139.76, shopName: 'Test Shop', imageKey: 'user1/img1' }];
     eqMock.mockClear();
     betweenMock.mockClear();
+    descMock.mockClear();
     selectMock.mockClear();
     innerJoinMock.mockClear();
     imagesLeftJoinMock.mockClear();
     friendshipsLeftJoinMock.mockClear();
     rowsWhereMock.mockClear();
+    rowsOrderByMock.mockClear();
     rowsLimitMock.mockClear();
   });
 
@@ -175,6 +179,12 @@ describe('GET /api/map/posts', () => {
   it('bbox にカンマだけのセグメント（空文字）があると 400 を返す', async () => {
     const res = await req('/api/map/posts?bbox=35.0,,36.0,140.0');
     expect(res.status).toBe(400);
+  });
+
+  it('orderBy(desc(posts.createdAt)) が呼ばれている', async () => {
+    await req('/api/map/posts?bbox=35.0,139.0,36.0,140.0');
+    expect(rowsOrderByMock).toHaveBeenCalledTimes(1);
+    expect(descMock).toHaveBeenCalledWith('posts.createdAt');
   });
 
   it('limit(MAX_PINS) が呼ばれている', async () => {

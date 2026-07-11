@@ -11,12 +11,15 @@
   "dependencies": {
     "@better-auth/expo": "^1.6.23",
     "@expo/metro-runtime": "~57.0.2",
+    "@expo/vector-icons": "^15.0.2",
     "@repo/api-types": "workspace:*",
     "@repo/shared": "workspace:*",
     "@tamagui/animations-reanimated": "^2.4.2",
     "@tamagui/babel-plugin": "^2.4.2",
     "@tamagui/config": "^2.4.2",
+    "@vis.gl/react-google-maps": "^1.9.0",
     "expo": "~57.0.1",
+    "expo-camera": "~57.0.1",
     "expo-constants": "^57.0.3",
     "expo-image-picker": "~57.0.2",
     "expo-linking": "^57.0.1",
@@ -32,6 +35,7 @@
     "react-native-reanimated": "4.5.0",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.25.2",
+    "react-native-svg": "15.15.4",
     "react-native-web": "^0.21.2",
     "tamagui": "^2.4.2"
   },
