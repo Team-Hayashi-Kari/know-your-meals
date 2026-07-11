@@ -5,9 +5,8 @@ import { CategoryFilterChips } from '../../components/map/CategoryFilterChips';
 import { GoogleMapView } from '../../components/map/GoogleMapView';
 import { MapSearchBar } from '../../components/map/MapSearchBar';
 import { NearbyPostsSheet } from '../../components/map/NearbyPostsSheet';
-import { getMe, getNearbyPosts, getReceivedFriendRequests, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
-import { getMe, getNearbyPosts, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
+import { getMe, getNearbyPosts, getReceivedFriendRequests, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
 
 // 現在地が取得できない場合のフォールバック（渋谷駅付近）
 const FALLBACK_CENTER = { lat: 35.6595, lng: 139.7005 };
