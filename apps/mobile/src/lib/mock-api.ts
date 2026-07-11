@@ -4,6 +4,28 @@
 // バックエンドが完成したら、この中の実装だけを本物の fetch() 呼び出しに差し替えます。
 // 関数名・引数・戻り値の型は API設計書（GET/PATCH /api/me など）に合わせてあります。
 
+import { Platform } from 'react-native';
+import { authClient } from './auth-client';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+
+  if (Platform.OS !== 'web') {
+    headers.Cookie = authClient.getCookie();
+  }
+
+  return fetch(`${API_URL}${path}`, {
+    ...init,
+    credentials: Platform.OS === 'web' ? 'include' : undefined,
+    headers,
+  });
+}
+
 export type MeProfile = {
   id: string;
   name: string;
@@ -33,6 +55,14 @@ export type UserProfile = {
   postCount: number;
   friendCount: number;
   relationshipStatus: RelationshipStatus;
+};
+
+export type FriendUser = {
+  id: string;
+  name: string;
+  handle: string | null;
+  image: string | null;
+  bio: string | null;
 };
 
 // ---- 仮データ（本物のDBの代わり） ----
@@ -116,6 +146,20 @@ export async function getSuggestedUsers(): Promise<UserSearchResult[]> {
   return mockUserProfiles.filter((u) => u.relationshipStatus === 'none');
 }
 
+// GET /api/me/friends
+export async function getFriends(): Promise<FriendUser[]> {
+  // ネイティブではcookieが自動送信されないため authClient.getCookie() で手動付与する
+  // (better-auth expoクライアントの標準パターン)
+  const cookie = authClient.getCookie();
+  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/me/friends`, {
+    credentials: 'include',
+    headers: cookie ? { Cookie: cookie } : undefined,
+  });
+  if (res.status === 401) throw new Error('Unauthorized');
+  if (!res.ok) throw new Error(`Failed to fetch friends (${res.status})`);
+  return res.json();
+}
+
 // GET /api/users/check-handle?handle= 相当
 // そのIDが使えるか（他の人に使われていないか）を返す
 export async function checkHandleAvailable(handle: string): Promise<boolean> {
@@ -175,6 +219,30 @@ export async function getUserPosts(handle: string): Promise<NearbyPost[]> {
   const user = mockUserProfiles.find((u) => u.handle.toLowerCase() === h);
   if (!user) return [];
   return mockNearbyPosts.filter((p) => p.userName === user.name);
+// GET /api/me/friend-requests?direction=received
+export type ReceivedFriendRequest = {
+  friendshipId: number;
+  id: string;
+  handle: string | null;
+  name: string;
+  image: string | null;
+  bio: string | null;
+  mutualFriendCount: number;
+};
+
+export async function getReceivedFriendRequests(): Promise<ReceivedFriendRequest[]> {
+  const res = await apiFetch('/api/me/friend-requests?direction=received');
+  if (!res.ok) throw new Error(`failed to fetch friend requests: ${res.status}`);
+  return res.json();
+}
+
+// PATCH /api/friendships/:id
+export async function updateFriendshipRequest(friendshipId: number, data: { status: 'accepted' | 'denied' }): Promise<void> {
+  const res = await apiFetch(`/api/friendships/${friendshipId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`failed to update friendship request: ${res.status}`);
 }
 
 // pinEmojiEnum (packages/db/src/schema/content.ts) と揃える

@@ -17,8 +17,11 @@ export function createAuth(env: Bindings) {
     },
     trustedOrigins: ['exp://', 'http://localhost:8081', 'https://know-your-meals.pages.dev'],
     plugins: [expo()],
-    account: {
-      storeStateStrategy: 'cookie',
+    advanced: {
+      // ponytail: pages.dev→API クロスオリジン fetch で SameSite=Lax の state cookie が保存されないため None に設定
+      cookies: {
+        state: { attributes: { sameSite: 'none', secure: true } },
+      },
     },
   });
 }

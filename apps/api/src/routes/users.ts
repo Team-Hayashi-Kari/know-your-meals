@@ -83,6 +83,27 @@ export const usersRoute = new Hono<Env>()
       return c.json({ error: 'Internal server error' }, 500);
     }
   })
+  .get('/check-handle', requireAuth, async (c) => {
+    const currentUser = c.get('user');
+    const handle = (c.req.query('handle') ?? '').trim();
+
+    if (handle.length < 3 || handle.length > 30 || !/^[A-Za-z0-9_]+$/.test(handle)) {
+      return c.json({ error: 'Invalid handle' }, 400);
+    }
+
+    const db = createDb(c.env.DATABASE_URL);
+
+    try {
+      const [existingHandleOwner] = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(and(eq(user.handle, handle), ne(user.id, currentUser.id)));
+
+      return c.json({ available: !existingHandleOwner });
+    } catch {
+      return c.json({ error: 'Internal server error' }, 500);
+    }
+  })
   .get('/:handle/posts', requireAuth, async (c) => {
     const authUser = c.get('user');
     const handle = c.req.param('handle');

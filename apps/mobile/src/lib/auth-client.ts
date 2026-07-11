@@ -16,6 +16,7 @@ const authStorage = {
     SecureStore.setItem(key, value);
   },
 };
+import { authStorage } from './auth-storage';
 
 export const authClient = createAuthClient({
   baseURL: process.env.EXPO_PUBLIC_API_URL,
