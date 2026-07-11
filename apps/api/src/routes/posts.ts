@@ -79,30 +79,33 @@ export const postsRoute = new Hono<Env>()
 
     const db = createDb(c.env.DATABASE_URL);
 
-    const upsertedShops = await db
-      .insert(shops)
-      .values({
-        googlePlaceId: shop.googlePlaceId,
-        name: shop.name,
-        address: shop.address ?? null,
-        lat: shop.lat,
-        lng: shop.lng,
-      })
-      .onConflictDoUpdate({
-        target: shops.googlePlaceId,
-        set: { name: shop.name, address: shop.address ?? null, lat: shop.lat, lng: shop.lng },
-      })
-      .returning();
-    const upsertedShop = upsertedShops[0];
-    if (!upsertedShop) return c.json({ error: 'Failed to upsert shop' }, 500);
-
     const key = `${authUser.id}/${crypto.randomUUID()}`;
     const arrayBuffer = await imageFile.arrayBuffer();
     const contentType = sniffMime(new Uint8Array(arrayBuffer));
     if (!contentType) return c.json({ error: 'Unsupported image format. Use JPEG, PNG, or WebP.' }, 400);
-    await c.env.IMAGES_BUCKET.put(key, arrayBuffer, {
-      httpMetadata: { contentType },
-    });
+
+    const [upsertedShops] = await Promise.all([
+      db
+        .insert(shops)
+        .values({
+          googlePlaceId: shop.googlePlaceId,
+          name: shop.name,
+          address: shop.address ?? null,
+          lat: shop.lat,
+          lng: shop.lng,
+        })
+        .onConflictDoUpdate({
+          target: shops.googlePlaceId,
+          set: { name: shop.name, address: shop.address ?? null, lat: shop.lat, lng: shop.lng },
+        })
+        .returning(),
+      c.env.IMAGES_BUCKET.put(key, arrayBuffer, { httpMetadata: { contentType } }),
+    ]);
+    const upsertedShop = upsertedShops[0];
+    if (!upsertedShop) {
+      await c.env.IMAGES_BUCKET.delete(key);
+      return c.json({ error: 'Failed to upsert shop' }, 500);
+    }
 
     let post: typeof posts.$inferSelect;
     let image: typeof images.$inferSelect;
