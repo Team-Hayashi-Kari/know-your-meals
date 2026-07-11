@@ -1,6 +1,6 @@
 import { usePathname, useRouter } from 'expo-router';
 import type { ReactElement } from 'react';
-import { Pressable } from 'react-native';
+import { Platform, Pressable } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { XStack, YStack } from 'tamagui';
 
@@ -86,6 +86,12 @@ export function BottomTabBar() {
               // 現在アクティブなタブを再タップしても同じ画面を履歴に積み増さないよう何もしない
               onPress={() => {
                 if (active) return;
+                // 遷移後もこのボタンがDOMフォーカスを保持したままだと、
+                // 現在画面がスタックでaria-hidden化された際にブラウザ警告が出るため事前にblurする
+                // (documentはWeb専用グローバルのためネイティブではガードが必要)
+                if (Platform.OS === 'web') {
+                  (document.activeElement as HTMLElement | null)?.blur();
+                }
                 router.push(route);
               }}
               hitSlop={10}
