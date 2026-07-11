@@ -45,7 +45,7 @@ const TABS: Tab[] = [
   },
   {
     key: 'saved',
-    route: '/saved',
+    route: '/bookmarks',
     label: '保存済み',
     Icon: ({ color }) => (
       <Svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
