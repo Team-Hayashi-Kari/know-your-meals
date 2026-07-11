@@ -32,10 +32,12 @@ type ProfileViewProps = {
   posts: ProfileViewPost[];
   // 他人プロフィール（FE-16）でのみ戻る導線を表示。自分プロフィールはタブのルートのため省略。
   onBack?: () => void;
-  // 自分: 設定歯車 / 他人: "…"メニューなど、右上アクションは呼び出し側で差し替える。
+  // 自分: 設定歯車 / 他人: "..."メニューなど、右上アクションは呼び出し側で差し替える。
   headerRight?: ReactNode;
-  // 自分: 「プロフィールを編集」/ 他人: relationshipStatus別CTA（FE-16で差し替え）
-  primaryAction: ProfilePrimaryAction;
+  // 自分プロフィール向けのメインCTA。
+  primaryAction?: ProfilePrimaryAction;
+  // 他人プロフィール向けなど、relationshipStatus 別CTAを呼び出し側で組み立てたい場合に使う。
+  actions?: ReactNode;
   // 自分プロフィールのみ表示する導線チップ（受信した申請・フレンド一覧など）。他人プロフィールでは省略可。
   links?: ProfileLink[];
   onPostPress?: (postId: string) => void;
@@ -53,6 +55,7 @@ export function ProfileView({
   onBack,
   headerRight,
   primaryAction,
+  actions,
   links = [],
   onPostPress,
 }: ProfileViewProps) {
@@ -85,58 +88,6 @@ export function ProfileView({
               {postsCount}
             </Text>
             <Text color="#888" fontSize={13}>
-import { getAvatarColor, getAvatarInitial } from '@repo/shared';
-import type { ReactNode } from 'react';
-import { Image as RNImage } from 'react-native';
-import { Text, XStack, YStack } from 'tamagui';
-import type { ProfilePost } from '../../lib/api';
-
-const GRID_GAP = 2;
-
-export type ProfileViewData = {
-  name: string;
-  handle: string;
-  image: string | null;
-  bio: string | null;
-  postCount: number;
-  friendCount: number;
-};
-
-type ProfileViewProps = {
-  profile: ProfileViewData;
-  posts: ProfilePost[];
-  // 右上または自己紹介下に置くアクション領域。自分プロフィールなら「編集」、他人プロフィールなら relationshipStatus 別 CTA
-  actions?: ReactNode;
-};
-
-export function ProfileView({ profile, posts, actions }: ProfileViewProps) {
-  return (
-    <YStack>
-      <XStack alignItems="center" gap="$4" marginBottom="$4">
-        <YStack
-          width={88}
-          height={88}
-          borderRadius={44}
-          backgroundColor={profile.image ? '#1a1a1a' : getAvatarColor(profile.name)}
-          justifyContent="center"
-          alignItems="center"
-          overflow="hidden"
-        >
-          {profile.image ? (
-            <RNImage source={{ uri: profile.image }} style={{ width: 88, height: 88 }} resizeMode="cover" />
-          ) : (
-            <Text color="#fff" fontSize={36} fontWeight="700">
-              {getAvatarInitial(profile.name)}
-            </Text>
-          )}
-        </YStack>
-
-        <XStack flex={1} justifyContent="space-around">
-          <YStack alignItems="center">
-            <Text color="#fff" fontSize={18} fontWeight="700">
-              {profile.postCount}
-            </Text>
-            <Text color="#888" fontSize={12}>
               投稿
             </Text>
           </YStack>
@@ -145,10 +96,6 @@ export function ProfileView({ profile, posts, actions }: ProfileViewProps) {
               {friendsCount}
             </Text>
             <Text color="#888" fontSize={13}>
-            <Text color="#fff" fontSize={18} fontWeight="700">
-              {profile.friendCount}
-            </Text>
-            <Text color="#888" fontSize={12}>
               フレンド
             </Text>
           </YStack>
@@ -169,22 +116,26 @@ export function ProfileView({ profile, posts, actions }: ProfileViewProps) {
         ) : null}
       </YStack>
 
-      <Pressable onPress={primaryAction.onPress}>
-        <YStack
-          height={52}
-          borderRadius="$5"
-          justifyContent="center"
-          alignItems="center"
-          marginBottom={links.length > 0 ? '$4' : '$6'}
-          backgroundColor={primaryAction.variant === 'filled' ? '#fff' : '#1a1a1a'}
-          borderWidth={primaryAction.variant === 'filled' ? 0 : 1}
-          borderColor="#333"
-        >
-          <Text color={primaryAction.variant === 'filled' ? '#000' : '#fff'} fontSize={15} fontWeight="700">
-            {primaryAction.label}
-          </Text>
-        </YStack>
-      </Pressable>
+      {primaryAction ? (
+        <Pressable onPress={primaryAction.onPress}>
+          <YStack
+            height={52}
+            borderRadius="$5"
+            justifyContent="center"
+            alignItems="center"
+            marginBottom={links.length > 0 ? '$4' : '$6'}
+            backgroundColor={primaryAction.variant === 'filled' ? '#fff' : '#1a1a1a'}
+            borderWidth={primaryAction.variant === 'filled' ? 0 : 1}
+            borderColor="#333"
+          >
+            <Text color={primaryAction.variant === 'filled' ? '#000' : '#fff'} fontSize={15} fontWeight="700">
+              {primaryAction.label}
+            </Text>
+          </YStack>
+        </Pressable>
+      ) : null}
+
+      {actions ? <YStack marginBottom="$6">{actions}</YStack> : null}
 
       {links.length > 0 ? (
         <XStack flexWrap="wrap" gap="$3" marginBottom="$6">
@@ -218,33 +169,5 @@ export function ProfileView({ profile, posts, actions }: ProfileViewProps) {
         ))}
       </XStack>
     </ScrollView>
-      <Text color="#fff" fontSize={20} fontWeight="700" marginBottom="$1">
-        {profile.name}
-      </Text>
-      <Text color="#555" fontSize={14} marginBottom="$2">
-        @{profile.handle}
-      </Text>
-      {profile.bio !== null && profile.bio !== '' && (
-        <Text color="#ccc" fontSize={14} lineHeight={20} marginBottom="$3">
-          {profile.bio}
-        </Text>
-      )}
-
-      {actions !== undefined && <YStack marginBottom="$5">{actions}</YStack>}
-
-      <XStack flexWrap="wrap" gap={GRID_GAP} marginTop="$2">
-        {posts.map((post) => (
-          <YStack key={post.id} width="32.5%" aspectRatio={1} backgroundColor="#1a1a1a" justifyContent="center" alignItems="center">
-            <Text fontSize={28}>{post.pin}</Text>
-          </YStack>
-        ))}
-      </XStack>
-
-      {posts.length === 0 && (
-        <Text color="#555" fontSize={14} textAlign="center" marginTop="$6">
-          まだ投稿がありません
-        </Text>
-      )}
-    </YStack>
   );
 }

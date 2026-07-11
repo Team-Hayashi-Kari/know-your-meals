@@ -1,6 +1,7 @@
+import { getAvatarColor, getAvatarInitial } from '@repo/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Button, ScrollView, Spinner, Text, YStack } from 'tamagui';
+import { Button, Spinner, Text, YStack } from 'tamagui';
 import { ProfileView } from '../../components/profile/ProfileView';
 import {
   ApiError,
@@ -13,6 +14,7 @@ import {
   sendFriendRequest,
   type UserProfile,
 } from '../../lib/api';
+import { toAbsoluteApiUrl } from '../../lib/profile-api';
 
 export default function UserProfileScreen() {
   const router = useRouter();
@@ -83,28 +85,22 @@ export default function UserProfileScreen() {
   }
 
   return (
-    <ScrollView
-      flex={1}
-      backgroundColor="#000"
-      contentContainerStyle={{
-        flexGrow: 1,
-        paddingHorizontal: 20,
-        paddingTop: 64,
-        paddingBottom: 32,
-      }}
-    >
-      <Button onPress={() => router.back()} alignSelf="flex-start" backgroundColor="transparent" padding={0} height={32} marginBottom="$4">
-        <Text color="#888" fontSize={14}>
-          ← 戻る
-        </Text>
-      </Button>
-
-      <ProfileView
-        profile={profile}
-        posts={posts}
-        actions={<FriendCta userId={profile.id} friendshipId={profile.friendshipId} status={profile.relationshipStatus} onChange={load} />}
-      />
-    </ScrollView>
+    <ProfileView
+      avatarInitial={getAvatarInitial(profile.name)}
+      avatarColor={getAvatarColor(profile.name)}
+      name={profile.name}
+      handle={profile.handle}
+      bio={profile.bio}
+      postsCount={profile.postCount}
+      friendsCount={profile.friendCount}
+      posts={posts.map((post) => ({
+        id: String(post.id),
+        imageUri: post.imageUrl ? toAbsoluteApiUrl(post.imageUrl) : null,
+      }))}
+      onBack={() => router.back()}
+      actions={<FriendCta userId={profile.id} friendshipId={profile.friendshipId} status={profile.relationshipStatus} onChange={load} />}
+      onPostPress={(postId) => router.push(`/posts/${postId}`)}
+    />
   );
 }
 

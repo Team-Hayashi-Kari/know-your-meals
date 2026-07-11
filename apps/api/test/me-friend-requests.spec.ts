@@ -11,7 +11,6 @@ mock.module('../src/lib/auth', () => ({
 }));
 
 const REQUEST_FROM_USER2 = {
-  friendshipId: 501,
   friendshipId: 101,
   requester: {
     id: 'user2',
@@ -25,7 +24,6 @@ const REQUEST_FROM_USER2 = {
 };
 
 const REQUEST_FROM_USER3 = {
-  friendshipId: 502,
   friendshipId: 102,
   requester: {
     id: 'user3',
@@ -187,7 +185,6 @@ describe('GET /api/me/friend-requests', () => {
       expect(res.status).toBe(200);
       expect(body).toEqual([
         {
-          friendshipId: 501,
           friendshipId: 101,
           id: 'user2',
           handle: 'friend-a',
@@ -195,10 +192,6 @@ describe('GET /api/me/friend-requests', () => {
           image: 'https://example.com/friend-a.png',
           bio: 'ramen',
           mutualFriendCount: 3,
-        },
-        {
-          friendshipId: 502,
-          mutualFriendCount: 0,
         },
         {
           friendshipId: 102,
@@ -233,7 +226,7 @@ describe('GET /api/me/friend-requests', () => {
     });
 
     it('mutualFriendCount を含める（共通フレンドがいない場合は 0）', async () => {
-      mockSelectResult = [REQUEST_FROM_USER2];
+      mockSelectResult = [{ ...REQUEST_FROM_USER2, mutualFriendCount: 0 }];
 
       const res = await req('/api/me/friend-requests?direction=received');
       const body = (await res.json()) as Record<string, unknown>[];
@@ -243,7 +236,7 @@ describe('GET /api/me/friend-requests', () => {
     });
 
     it('自分と申請者の共通フレンド数を mutualFriendCount に返す', async () => {
-      mockSelectResult = [REQUEST_FROM_USER2];
+      mockSelectResult = [{ ...REQUEST_FROM_USER2, mutualFriendCount: 1 }];
       mockMyFriendRows = [{ requesterId: 'user1', addresseeId: 'userX' }];
       mockTheirFriendRows = [{ requesterId: 'user2', addresseeId: 'userX' }];
 
