@@ -7,7 +7,8 @@ import { MapSearchBar } from '../../components/map/MapSearchBar';
 import { NearbyPostsSheet } from '../../components/map/NearbyPostsSheet';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { ProfileMenu } from '../../components/navigation/ProfileMenu';
-import { getMe, getNearbyPosts, getReceivedFriendRequests, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
+import { ApiError, getMe } from '../../lib/api';
+import { getNearbyPosts, getReceivedFriendRequests, type NearbyPost, type PinEmoji } from '../../lib/mock-api';
 
 // 現在地が取得できない場合のフォールバック（渋谷駅付近）
 const FALLBACK_CENTER = { lat: 35.6595, lng: 139.7005 };
@@ -51,13 +52,21 @@ export default function HomeScreen() {
   }, [center]);
 
   useEffect(() => {
-    getMe().then((me) => {
-      const name = me.name.trim();
-      setUserName(name);
-      setUserHandle(me.handle);
-      setUserInitial(name ? name.charAt(0).toUpperCase() : '?');
-    });
-  }, []);
+    getMe()
+      .then((me) => {
+        const name = me.name.trim();
+        setUserName(name);
+        setUserHandle(me.handle);
+        setUserInitial(name ? name.charAt(0).toUpperCase() : '?');
+      })
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) {
+          router.replace('/');
+          return;
+        }
+        console.error('[ユーザー情報取得エラー]', e);
+      });
+  }, [router]);
 
   const visiblePosts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
