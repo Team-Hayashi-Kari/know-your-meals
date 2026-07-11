@@ -9,3 +9,14 @@ export type Me = {
   createdAt: string;
   updatedAt: string;
 };
+
+// GET /api/me/friend-requests?direction=sent の1件分のレスポンス型
+export type SentFriendRequest = {
+  friendshipId: number;
+  requestedAt: string;
+  id: string;
+  handle: string | null;
+  name: string;
+  image: string | null;
+  bio: string | null;
+};
