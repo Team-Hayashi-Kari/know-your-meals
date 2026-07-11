@@ -115,6 +115,8 @@ export async function acceptFriendRequest(friendshipId: number): Promise<void> {
   await apiFetch(`/api/friendships/${friendshipId}`, { method: 'PATCH', body: JSON.stringify({ status: 'accepted' }) });
 }
 
+export { apiFetch } from './api-client';
+
 type UpdateMeInput = Partial<Pick<Me, 'name' | 'handle' | 'bio' | 'image'>>;
 
 // GET /api/me
