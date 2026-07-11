@@ -31,6 +31,7 @@ export const mapRoute = new Hono<Env>().get('/posts', requireAuth, async (c) => 
     .select({
       postId: posts.id,
       pin: posts.pin,
+      userId: posts.userId,
       comment: posts.comment,
       createdAt: posts.createdAt,
       lat: shops.lat,

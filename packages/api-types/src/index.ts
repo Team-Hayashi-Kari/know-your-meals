@@ -38,6 +38,17 @@ export type SentFriendRequest = {
   bio: string | null;
 };
 
+// GET /api/me/friend-requests?direction=received の1件分のレスポンス型
+export type ReceivedFriendRequest = {
+  friendshipId: number;
+  id: string;
+  handle: string | null;
+  name: string;
+  image: string | null;
+  bio: string | null;
+  mutualFriendCount: number;
+};
+
 // GET /api/me/bookmarks のレスポンス型（apps/api/src/routes/me.ts の .get('/bookmarks', ...) と揃える）
 // bookmarkId / bookmarkedAt は含めない（仕様上返さない）
 export type PinEmoji = '🍜' | '🍣' | '🍛' | '🍙' | '🍔' | '🍕' | '🥩' | '🍰' | '🍺' | '🥟';

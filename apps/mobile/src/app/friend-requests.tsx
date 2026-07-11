@@ -1,8 +1,9 @@
+import type { ReceivedFriendRequest } from '@repo/api-types';
 import { getAvatarColor, getAvatarInitial } from '@repo/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Button, ScrollView, Spinner, Text, XStack, YStack } from 'tamagui';
-import { getReceivedFriendRequests, type ReceivedFriendRequest, updateFriendshipRequest } from '../lib/mock-api';
+import { acceptFriendRequest, denyFriendRequest, getReceivedFriendRequests } from '../lib/api';
 
 export default function FriendRequestsScreen() {
   const router = useRouter();
@@ -77,7 +78,11 @@ function RequestRow({ request, onResolved }: { request: ReceivedFriendRequest; o
     setProcessing(true);
     setError(false);
     try {
-      await updateFriendshipRequest(request.friendshipId, { status });
+      if (status === 'accepted') {
+        await acceptFriendRequest(request.friendshipId);
+      } else {
+        await denyFriendRequest(request.friendshipId);
+      }
       onResolved();
     } catch {
       setError(true);

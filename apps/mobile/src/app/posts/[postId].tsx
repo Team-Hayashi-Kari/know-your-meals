@@ -49,13 +49,18 @@ export default function PostDetailScreen() {
   const handleToggleBookmark = async () => {
     if (!post) return;
     setSaving(true);
-    if (isBookmarked) {
-      await removeBookmark(post.id);
-    } else {
-      await addBookmark(post.id);
+    try {
+      if (isBookmarked) {
+        await removeBookmark(post.id);
+      } else {
+        await addBookmark(post.id);
+      }
+      setIsBookmarked((prev) => !prev);
+    } catch (e) {
+      console.error('[ブックマーク更新エラー]', e);
+    } finally {
+      setSaving(false);
     }
-    setIsBookmarked((prev) => !prev);
-    setSaving(false);
   };
 
   const handleDeletePost = async () => {

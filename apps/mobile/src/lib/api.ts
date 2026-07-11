@@ -3,7 +3,7 @@
 // 本番 API (apps/api) への fetch ラッパー。Issue #78 / FE-16。
 // Web は credentials: 'include' でブラウザCookieを送信し、Native は better-auth expo の Cookie を手動付与する。
 
-import type { BookmarkedPost, Me, SentFriendRequest } from '@repo/api-types';
+import type { BookmarkedPost, Me, ReceivedFriendRequest, SentFriendRequest } from '@repo/api-types';
 import { Platform } from 'react-native';
 import { authClient } from './auth-client';
 import { type SavedPostItem, toSavedPostItem } from './saved-posts';
@@ -116,6 +116,11 @@ export async function acceptFriendRequest(friendshipId: number): Promise<void> {
   await apiFetch(`/api/friendships/${friendshipId}`, { method: 'PATCH', body: JSON.stringify({ status: 'accepted' }) });
 }
 
+// PATCH /api/friendships/:id 相当（受信した申請の拒否）。friendshipId を使う
+export async function denyFriendRequest(friendshipId: number): Promise<void> {
+  await apiFetch(`/api/friendships/${friendshipId}`, { method: 'PATCH', body: JSON.stringify({ status: 'denied' }) });
+}
+
 export { apiFetch } from './api-client';
 
 type UpdateMeInput = Partial<Pick<Me, 'name' | 'handle' | 'bio' | 'image'>>;
@@ -156,4 +161,9 @@ export async function checkHandleAvailable(handle: string): Promise<boolean> {
 // GET /api/me/friend-requests?direction=sent
 export async function getSentFriendRequests(): Promise<SentFriendRequest[]> {
   return apiFetch<SentFriendRequest[]>('/api/me/friend-requests?direction=sent');
+}
+
+// GET /api/me/friend-requests?direction=received
+export async function getReceivedFriendRequests(): Promise<ReceivedFriendRequest[]> {
+  return apiFetch<ReceivedFriendRequest[]>('/api/me/friend-requests?direction=received');
 }
