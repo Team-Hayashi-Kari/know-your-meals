@@ -1,7 +1,7 @@
 import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable } from 'react-native';
-import { Button, Spinner, Text, YStack } from 'tamagui';
+import { Button, Spinner, Text, XStack, YStack } from 'tamagui';
 import { BottomTabBar } from '../../components/navigation/BottomTabBar';
 import { PhotoSlot } from '../../components/post-flow/PhotoSlot';
 import { PinBadge } from '../../components/post-flow/PinBadge';
@@ -35,9 +35,21 @@ export default function SavedScreen() {
   return (
     <YStack flex={1} backgroundColor="#000">
       <YStack paddingHorizontal="$5" paddingTop="$6" paddingBottom="$4" gap="$1">
-        <Text color="#fff" fontSize={28} fontWeight="800">
-          保存済み
-        </Text>
+        <XStack alignItems="center" gap="$3">
+          <Pressable
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="戻る"
+          >
+            <Text fontSize={22} color="#fff">
+              ←
+            </Text>
+          </Pressable>
+          <Text color="#fff" fontSize={28} fontWeight="800">
+            保存済み
+          </Text>
+        </XStack>
         <Text color="#777" fontSize={13}>
           あとで見返したい投稿
         </Text>
