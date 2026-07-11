@@ -14,7 +14,13 @@ import type { Env } from './types';
 
 const apiCors = cors({
   origin: (origin) => {
-    const allowed = ['http://localhost:8081', 'http://127.0.0.1:8081', 'https://know-your-meals.pages.dev'];
+    const allowed = [
+      'http://localhost:8081',
+      'http://127.0.0.1:8081',
+      'https://know-your-meals.pages.dev',
+      'https://know-your-meals.com',
+      'https://www.know-your-meals.com',
+    ];
     if (!origin) return null;
     if (allowed.includes(origin) || origin.startsWith('exp://')) return origin;
     return null;
