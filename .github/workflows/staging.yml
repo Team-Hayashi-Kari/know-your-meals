@@ -1,0 +1,91 @@
+name: Deploy to Staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Run database migrations (staging)
+        run: bun run db:migrate
+        working-directory: packages/db
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+
+  deploy-api:
+    needs: [migrate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Sync staging secrets
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET_STAGING }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL_STAGING }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+        run: |
+          echo "$DATABASE_URL" | bunx wrangler secret put DATABASE_URL --env staging
+          echo "$BETTER_AUTH_SECRET" | bunx wrangler secret put BETTER_AUTH_SECRET --env staging
+          echo "$BETTER_AUTH_URL" | bunx wrangler secret put BETTER_AUTH_URL --env staging
+          echo "$GOOGLE_CLIENT_ID" | bunx wrangler secret put GOOGLE_CLIENT_ID --env staging
+          echo "$GOOGLE_CLIENT_SECRET" | bunx wrangler secret put GOOGLE_CLIENT_SECRET --env staging
+          echo "$GOOGLE_PLACES_API_KEY" | bunx wrangler secret put GOOGLE_PLACES_API_KEY --env staging
+      - name: Deploy API to Cloudflare Workers (staging)
+        run: bunx wrangler deploy --env staging
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Build Web (staging)
+        run: bunx expo export --platform web
+        working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.STAGING_API_URL }}
+          EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY }}
+          EXPO_PUBLIC_GOOGLE_MAPS_MAP_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_MAPS_MAP_ID }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist-staging
+          path: apps/mobile/dist
+
+  deploy-web:
+    needs: [build-web, deploy-api]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist-staging
+          path: apps/mobile/dist
+      - name: Deploy Web to Cloudflare Pages (staging preview)
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: know-your-meals
+          directory: apps/mobile/dist
+          branch: staging

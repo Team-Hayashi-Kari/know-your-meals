@@ -14,3 +14,13 @@ bucket_name = "know-your-meals-images"
 type = "Data"
 globs = ["**/*.woff2"]
 fallthrough = true
+
+# staging環境 (wrangler deploy --env staging で know-your-meals-api-staging としてデプロイされる)
+# DATABASE_URL / BETTER_AUTH_SECRET / BETTER_AUTH_URL / GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_PLACES_API_KEY は
+# `wrangler secret put <NAME> --env staging` で別途設定する (vars/r2_buckets と違い secrets はここに書かない)
+[env.staging.vars]
+IMAGES_BASE_URL = "https://pub-ec6f9e5e07a74dd4b273a9ba89e6ab93.r2.dev"
+
+[[env.staging.r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "know-your-meals-images"

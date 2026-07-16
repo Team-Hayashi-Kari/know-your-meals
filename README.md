@@ -158,6 +158,39 @@ cd apps/mobile && bun run dev   # w でWeb / i でiOS / a でAndroid
 
 ---
 
+## 🌱 Staging環境
+
+Cloudflare Workers (API) / Pages (Web) 上に、本番と分離したstaging環境を用意しています。
+
+- **API**: `apps/api/wrangler.toml` の `[env.staging]` にデプロイされ、Worker名は自動的に `know-your-meals-api-staging` になります。R2バケット (`know-your-meals-images`) は本番と共用です。
+- **Web**: 既存のPagesプロジェクト `know-your-meals` の `staging` ブランチとしてプレビューデプロイされます(`https://staging.know-your-meals.pages.dev`)。
+- **DB**: Neonのstaging用ブランチを使用します(本番と分離)。
+
+### デプロイ方法
+
+GitHub Actionsの [`Deploy to Staging`](.github/workflows/staging.yml) ワークフローを **手動実行 (workflow_dispatch)** します。push等では自動デプロイされません。
+
+### 事前準備 (初回のみ)
+
+1. **Neonでstaging用ブランチを作成**し、その接続文字列を取得する。
+2. GitHubリポジトリの Settings → Secrets and variables → Actions に以下を追加する。
+
+   | 種別 | 名前 | 内容 |
+   |---|---|---|
+   | Secret | `DATABASE_URL_STAGING` | Neon staging ブランチの接続文字列 |
+   | Secret | `BETTER_AUTH_SECRET_STAGING` | staging用のbetter-authシークレット(本番と別値を推奨) |
+   | Secret | `BETTER_AUTH_URL_STAGING` | staging APIのURL(例: `https://know-your-meals-api-staging.<your-subdomain>.workers.dev`) |
+   | Variable | `STAGING_API_URL` | 上記と同じstaging APIのURL(Web側の`EXPO_PUBLIC_API_URL`用) |
+
+   `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_PLACES_API_KEY` / `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` / `EXPO_PUBLIC_GOOGLE_MAPS_MAP_ID` は本番と共用のため追加不要です。
+
+3. Google Cloud ConsoleのOAuthクライアントに、staging APIのコールバックURL (`<STAGING_API_URL>/api/auth/callback/google`) を許可済みリダイレクトURIとして追加する。
+4. 初回デプロイ後にWorkerの実際のURLが確定するので、`BETTER_AUTH_URL_STAGING` / `STAGING_API_URL` を実URLに更新して再実行する。
+
+`DATABASE_URL` / `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` / `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_PLACES_API_KEY` のWorkerシークレットは、ワークフロー実行のたびに `wrangler secret put --env staging` で自動的に同期されます。
+
+---
+
 ## 🤝 Contributing
 
 このプロジェクトはハッカソン期間中に開発されています。Issue / PR お気軽にどうぞ。
