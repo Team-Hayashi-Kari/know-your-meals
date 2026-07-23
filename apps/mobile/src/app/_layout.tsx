@@ -1,12 +1,10 @@
-import { config } from '@tamagui/config';
+import config from '@tamagui-config';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { createTamagui, TamaguiProvider } from 'tamagui';
+import { TamaguiProvider } from 'tamagui';
 import { initAuthStorage } from '../lib/auth-storage';
-
-const tamaguiConfig = createTamagui(config);
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
@@ -24,7 +22,7 @@ export default function RootLayout() {
   }
 
   return (
-    <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+    <TamaguiProvider config={config} defaultTheme="dark">
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }} />
     </TamaguiProvider>
