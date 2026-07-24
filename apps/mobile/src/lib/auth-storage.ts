@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
+// expo-secure-storeはweb非対応。better-authはweb側でcookieにフォールバックするため、no-opで問題ない。
 export const authStorage = {
   getItem: (key: string): string | null => {
     if (Platform.OS === 'web') return null;
