@@ -7,8 +7,8 @@ export const authStorage = {
     if (Platform.OS === 'web') return null;
     return SecureStore.getItem(key);
   },
-  setItem: (key: string, value: string): void => {
+  setItem: (key: string, value: string): void | Promise<void> => {
     if (Platform.OS === 'web') return;
-    SecureStore.setItem(key, value);
+    return SecureStore.setItemAsync(key, value);
   },
 };
