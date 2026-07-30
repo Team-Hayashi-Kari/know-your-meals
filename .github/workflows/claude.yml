@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
       id-token: write
       actions: read
@@ -36,3 +36,19 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           additional_permissions: |
             actions: read
+          use_sticky_comment: true
+          show_full_output: true
+          claude_args: '--allowedTools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*),Bash(gh pr comment:*),Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment"'
+          prompt: |
+            REPO: ${{ github.repository }}
+            EVENT: ${{ github.event_name }}
+
+            @claudeへのメンションに応答してください。必要に応じてコード調査やコメント本文への回答を行ってください。
+
+            もし現在のコンテキストがPR（PRへのコメント、PRレビューコメント、PRレビュー）であれば、レビュー依頼として扱い、必ずGitHubへの操作として結果を反映してください。回答をチャットのメッセージとして返すだけでは何も投稿されません。
+            - 重大な問題（バグ、セキュリティ上の懸念など）が無ければ、`gh pr review <PR番号> --approve --body "..."` を実行してPRを承認してください。
+            - 問題点や改善提案がある場合は、承認はせずに `gh pr comment <PR番号> --body "..."` でレビュー内容をトップレベルコメントとして投稿してください。
+            - 特定のコード行への指摘があれば `mcp__github_inline_comment__create_inline_comment`（`confirmed: true`）で該当行にコメントしてください。
+            - PR番号はイベントのペイロード（issue番号またはpull_request番号）から特定してください。
+
+            PRのコンテキストではない（通常のissueなど）場合は、この承認/コメントフローは行わず、通常どおり質問に回答してください。
