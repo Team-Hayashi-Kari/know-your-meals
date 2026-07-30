@@ -29,7 +29,10 @@ export function createAuth(env: Bindings) {
     plugins: [expo()],
     advanced: {
       // ponytail: pages.dev↔API はクロスサイトのため SameSite=None が必要（state/session_token 両方）
-      defaultCookieAttributes: { sameSite: 'none', secure: true },
+      // secure cookieはHTTPS必須。ローカル(http://localhost)のiOSシミュレーターだと
+      // ASWebAuthenticationSessionがSecure cookieを保存できずstate mismatchになるため、
+      // baseURLがhttpsかどうかで切り替える
+      defaultCookieAttributes: { sameSite: 'none', secure: env.BETTER_AUTH_URL.startsWith('https://') },
     },
   });
 }
