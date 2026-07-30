@@ -49,7 +49,7 @@ export default function LoginScreen() {
   return (
     <YStack flex={1} backgroundColor="#000" paddingHorizontal="$6" justifyContent="space-between" paddingTop="$20" paddingBottom="$12">
       {/* Branding */}
-      <YStack animation="lazy" enterStyle={{ opacity: 0, y: -20 }} opacity={1} y={0}>
+      <YStack transition="lazy" enterStyle={{ opacity: 0, y: -20 }} opacity={1} y={0}>
         <Text fontSize={48} fontWeight="900" color="#fff" letterSpacing={-2} lineHeight={52}>
           Know Your{'\n'}Meals.
         </Text>
@@ -59,7 +59,7 @@ export default function LoginScreen() {
       </YStack>
 
       {/* CTA */}
-      <YStack gap="$4" animation="lazy" enterStyle={{ opacity: 0, y: 30 }} opacity={1} y={0}>
+      <YStack gap="$4" transition="lazy" enterStyle={{ opacity: 0, y: 30 }} opacity={1} y={0}>
         {error ? (
           <Text color="#ff4444" fontSize={14} textAlign="center">
             {error}
@@ -71,7 +71,7 @@ export default function LoginScreen() {
           disabled={loading}
           backgroundColor="#fff"
           pressStyle={{ backgroundColor: '#e8e8e8', scale: 0.97 }}
-          animation="fast"
+          transition="quick"
           borderRadius="$5"
           height={60}
           disabledStyle={{ opacity: 0.5 }}
