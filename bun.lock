@@ -41,7 +41,6 @@
         "@expo/vector-icons": "^15.0.2",
         "@repo/api-types": "workspace:*",
         "@repo/shared": "workspace:*",
-        "@tamagui/animations-react-native": "^2.4.5",
         "@tamagui/animations-reanimated": "^2.4.5",
         "@tamagui/babel-plugin": "^2.4.5",
         "@tamagui/config": "^2.4.5",
