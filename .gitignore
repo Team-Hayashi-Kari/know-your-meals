@@ -45,3 +45,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # codegraph
 .codegraph
+
+# Expo prebuild (CNG) generated native projects
+.expo/
+ios/
