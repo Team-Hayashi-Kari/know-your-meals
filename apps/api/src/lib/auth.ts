@@ -30,9 +30,7 @@ export function createAuth(env: Bindings) {
     advanced: {
       // 本番はpages.dev↔APIがクロスサイトなのでSameSite=None+Secure。
       // ローカルはlocalhost同士でSameSite不要、かつSecure必須のNoneはHTTPで弾かれるためLax。
-      defaultCookieAttributes: env.BETTER_AUTH_URL.startsWith('https://')
-        ? { sameSite: 'none', secure: true }
-        : { sameSite: 'lax', secure: false },
+      defaultCookieAttributes: env.BETTER_AUTH_URL.startsWith('https://') ? { sameSite: 'none', secure: true } : { sameSite: 'lax', secure: false },
     },
   });
 }
