@@ -28,8 +28,9 @@ export function createAuth(env: Bindings) {
     ],
     plugins: [expo()],
     advanced: {
-      // ponytail: pages.dev↔API はクロスサイトのため SameSite=None が必要（state/session_token 両方）
-      defaultCookieAttributes: { sameSite: 'none', secure: true },
+      // 本番はpages.dev↔APIがクロスサイトなのでSameSite=None+Secure。
+      // ローカルはlocalhost同士でSameSite不要、かつSecure必須のNoneはHTTPで弾かれるためLax。
+      defaultCookieAttributes: env.BETTER_AUTH_URL.startsWith('https://') ? { sameSite: 'none', secure: true } : { sameSite: 'lax', secure: false },
     },
   });
 }
