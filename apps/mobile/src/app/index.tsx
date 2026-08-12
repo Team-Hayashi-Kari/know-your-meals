@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { Button, Spinner, Text, XStack, YStack } from 'tamagui';
+import { ApiError, getMe } from '../lib/api';
 import { authClient } from '../lib/auth-client';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -11,6 +12,21 @@ export default function LoginScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // 既にセッションが有効なら、ログインボタンを見せずに先の画面へ即リダイレクトする
+  useEffect(() => {
+    getMe()
+      .then((me) => {
+        router.replace(me.handle ? '/home' : '/profile-setup');
+      })
+      .catch((e) => {
+        if (!(e instanceof ApiError && e.status === 401)) {
+          console.error('[Session check error]', e);
+        }
+        setCheckingSession(false);
+      });
+  }, [router]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -45,6 +61,14 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+  if (checkingSession) {
+    return (
+      <YStack flex={1} backgroundColor="#000" justifyContent="center" alignItems="center">
+        <Spinner color="#555" />
+      </YStack>
+    );
+  }
 
   return (
     <YStack flex={1} backgroundColor="#000" paddingHorizontal="$6" justifyContent="space-between" paddingTop="$20" paddingBottom="$12">
